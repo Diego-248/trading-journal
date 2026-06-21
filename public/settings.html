@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Trading Plan & Journal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .settings-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .settings-item:last-child { border-bottom: none; }
+  .settings-item .label { font-weight: 600; }
+  .settings-item .desc { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">Trading<span>Plan</span> &amp; Journal</div>
+    <div class="nav-links">
+      <a href="index.html">Plan</a>
+      <a href="journal.html">Journal</a>
+      <a href="history.html">History</a>
+      <a href="profile.html">Profile</a>
+      <a href="settings.html" class="active">Settings</a>
+      <span id="navUsername" style="color:var(--muted); font-size:0.85rem;"></span>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h2>Settings</h2>
+
+      <div class="settings-item">
+        <div>
+          <div class="label">App version</div>
+          <div class="desc" id="appVersion">—</div>
+        </div>
+      </div>
+
+      <div class="settings-item">
+        <div>
+          <div class="label">Account</div>
+          <div class="desc">Password change and other account options coming soon.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <button id="logoutBtn" class="btn-primary" style="background:var(--danger); color:#fff;">Log Out</button>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>
