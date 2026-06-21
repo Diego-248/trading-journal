@@ -1,15 +1,15 @@
 /* style.css - Trading Plan & Journal */
 
 :root {
-  --bg: #0f1115;
-  --panel: #181b22;
-  --panel-2: #1f232c;
-  --border: #2a2f3a;
-  --text: #e8eaed;
-  --muted: #9aa3b2;
-  --accent: #3ddc97;
-  --accent-2: #4f8cff;
-  --danger: #ff5d5d;
+  --bg: #14110b;
+  --panel: #1f1a10;
+  --panel-2: #2a2316;
+  --border: #3d3320;
+  --text: #f5ecd8;
+  --muted: #b8a87e;
+  --accent: #d4af37;
+  --accent-2: #f0c75e;
+  --danger: #e0613f;
   --radius: 10px;
 }
 
