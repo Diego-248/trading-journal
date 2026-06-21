@@ -47,6 +47,15 @@ CREATE TABLE IF NOT EXISTS journal_entries (
   created_at TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS user_plans (
+  user_id INTEGER PRIMARY KEY,
+  chart_process TEXT DEFAULT '',
+  entry_criteria TEXT DEFAULT '',
+  exit_criteria TEXT DEFAULT '',
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
 `);
 
 // ---------- Middleware ----------
@@ -118,6 +127,34 @@ app.get('/api/me', (req, res) => {
   } else {
     res.json({ loggedIn: false });
   }
+});
+
+// ---------- Personal plan routes (chart process / entry / exit criteria) ----------
+app.get('/api/plan', requireAuth, (req, res) => {
+  let row = db.prepare('SELECT * FROM user_plans WHERE user_id = ?').get(req.session.userId);
+  if (!row) {
+    row = { chart_process: '', entry_criteria: '', exit_criteria: '' };
+  }
+  res.json(row);
+});
+
+app.post('/api/plan', requireAuth, (req, res) => {
+  const { chart_process, entry_criteria, exit_criteria } = req.body;
+  const existing = db.prepare('SELECT user_id FROM user_plans WHERE user_id = ?').get(req.session.userId);
+
+  if (existing) {
+    db.prepare(`
+      UPDATE user_plans
+      SET chart_process = ?, entry_criteria = ?, exit_criteria = ?, updated_at = datetime('now')
+      WHERE user_id = ?
+    `).run(chart_process || '', entry_criteria || '', exit_criteria || '', req.session.userId);
+  } else {
+    db.prepare(`
+      INSERT INTO user_plans (user_id, chart_process, entry_criteria, exit_criteria)
+      VALUES (?, ?, ?, ?)
+    `).run(req.session.userId, chart_process || '', entry_criteria || '', exit_criteria || '');
+  }
+  res.json({ success: true });
 });
 
 // ---------- Journal CRUD routes ----------
