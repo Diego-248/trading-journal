@@ -9,12 +9,6 @@ async function loadProfile() {
   document.getElementById('profileUsername').textContent = data.username || '—';
   document.getElementById('avatarInitial').textContent = (data.username || '?').charAt(0).toUpperCase();
 
-  if (data.created_at) {
-    const date = new Date(data.created_at + 'Z');
-    document.getElementById('profileSince').textContent =
-      'Member since ' + date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-  }
-
   const total = data.total_trades || 0;
   const followed = data.followed_count || 0;
   const wins = data.wins || 0;
@@ -25,6 +19,35 @@ async function loadProfile() {
   document.getElementById('statFollowed').textContent = followedPct + '%';
   document.getElementById('statWins').textContent = wins;
   document.getElementById('statLosses').textContent = losses;
+  applySavedAvatar();
 }
 
 loadProfile();
+
+// ---------- Avatar upload (stored on-device) ----------
+const avatarEl = document.getElementById('avatarInitial');
+const avatarInput = document.getElementById('avatarInput');
+const avatarAddBtn = document.getElementById('avatarAddBtn');
+
+function applySavedAvatar() {
+  const saved = localStorage.getItem('avatarImage');
+  if (saved) {
+    avatarEl.style.backgroundImage = `url(${saved})`;
+    avatarEl.textContent = '';
+  }
+}
+applySavedAvatar();
+
+avatarAddBtn.addEventListener('click', () => avatarInput.click());
+
+avatarInput.addEventListener('change', () => {
+  const file = avatarInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    localStorage.setItem('avatarImage', reader.result);
+    avatarEl.style.backgroundImage = `url(${reader.result})`;
+    avatarEl.textContent = '';
+  };
+  reader.readAsDataURL(file);
+});
