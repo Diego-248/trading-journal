@@ -8,12 +8,17 @@ const session = require('express-session');
 const path = require('path');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ---------- Database setup ----------
-const db = new Database(path.join(__dirname, 'db', 'trading.db'));
+const dbDir = path.join(__dirname, 'db');
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+const db = new Database(path.join(dbDir, 'trading.db'));
 db.pragma('journal_mode = WAL');
 
 db.exec(`
