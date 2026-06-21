@@ -129,6 +129,19 @@ app.get('/api/me', (req, res) => {
   }
 });
 
+app.get('/api/profile', requireAuth, (req, res) => {
+  const user = db.prepare('SELECT username, created_at FROM users WHERE id = ?').get(req.session.userId);
+  const stats = db.prepare(`
+    SELECT
+      COUNT(*) as total_trades,
+      SUM(CASE WHEN followed_plan = 'Yes' THEN 1 ELSE 0 END) as followed_count,
+      SUM(CASE WHEN result = 'Win' THEN 1 ELSE 0 END) as wins,
+      SUM(CASE WHEN result = 'Loss' THEN 1 ELSE 0 END) as losses
+    FROM journal_entries WHERE user_id = ?
+  `).get(req.session.userId);
+  res.json({ ...user, ...stats });
+});
+
 // ---------- Personal plan routes (chart process / entry / exit criteria) ----------
 app.get('/api/plan', requireAuth, (req, res) => {
   let row = db.prepare('SELECT * FROM user_plans WHERE user_id = ?').get(req.session.userId);
