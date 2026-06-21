@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade History — Trading Plan & Journal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .entry-card { margin-bottom: 16px; }
+  .entry-head {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+  }
+  .entry-head .meta { color: var(--muted); font-size: 0.85rem; }
+  .entry-section { margin-top: 10px; }
+  .entry-section .label { color: var(--muted); font-size: 0.8rem; margin-bottom: 4px; }
+  .entry-section .value { white-space: pre-wrap; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">Trading<span>Plan</span> &amp; Journal</div>
+    <div class="nav-links">
+      <a href="index.html">Plan</a>
+      <a href="journal.html">Journal</a>
+      <a href="history.html" class="active">History</a>
+      <a href="profile.html">Profile</a>
+      <span id="navUsername" style="color:var(--muted); font-size:0.85rem;"></span>
+      <button id="logoutBtn" class="btn-secondary">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h2>Trade History</h2>
+      <p style="color:var(--muted)">Every trade you've logged, with the full lesson and notes you wrote.</p>
+    </div>
+
+    <div id="entriesWrap"></div>
+    <p id="emptyState" style="color:var(--muted); display:none;">No trades logged yet. Go to the Journal page to add one.</p>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/history.js"></script>
+</body>
+</html>
