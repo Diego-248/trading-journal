@@ -1,62 +1,65 @@
 // server.js
 // Trading Plan & Journal - Backend
 // Handles: user registration/login (sessions + hashed passwords),
-// SQLite database storage, and CRUD API for journal entries.
+// Postgres database storage (persists across deploys/restarts),
+// and CRUD API for journal entries + personal plan + profile.
 
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
-const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ---------- Database setup ----------
-const dbDir = path.join(__dirname, 'db');
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+// ---------- Database setup (Postgres) ----------
+// DATABASE_URL is provided automatically by Render when you attach a Postgres database.
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+});
+
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS journal_entries (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      trade_date TEXT,
+      symbol TEXT,
+      entry_price TEXT,
+      stop_loss TEXT,
+      take_profit TEXT,
+      result TEXT,
+      r_value TEXT,
+      followed_plan TEXT,
+      emotion_entry TEXT,
+      emotion_after TEXT,
+      lesson TEXT,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_plans (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id),
+      chart_process TEXT DEFAULT '',
+      entry_criteria TEXT DEFAULT '',
+      exit_criteria TEXT DEFAULT '',
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
 }
-const db = new Database(path.join(dbDir, 'trading.db'));
-db.pragma('journal_mode = WAL');
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS journal_entries (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  trade_date TEXT,
-  symbol TEXT,
-  entry_price TEXT,
-  stop_loss TEXT,
-  take_profit TEXT,
-  result TEXT,
-  r_value TEXT,
-  followed_plan TEXT,      -- "Yes" or "No"
-  emotion_entry TEXT,
-  emotion_after TEXT,
-  lesson TEXT,
-  notes TEXT,
-  created_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
-CREATE TABLE IF NOT EXISTS user_plans (
-  user_id INTEGER PRIMARY KEY,
-  chart_process TEXT DEFAULT '',
-  entry_criteria TEXT DEFAULT '',
-  exit_criteria TEXT DEFAULT '',
-  updated_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (user_id) REFERENCES users(id)
-);
-`);
 
 // ---------- Middleware ----------
 app.use(express.json());
@@ -87,13 +90,16 @@ app.post('/api/register', async (req, res) => {
     return res.status(400).json({ error: 'Username required, password must be 6+ characters.' });
   }
   try {
-    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
-    if (existing) {
+    const existing = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (existing.rows.length) {
       return res.status(409).json({ error: 'Username already taken.' });
     }
     const hash = await bcrypt.hash(password, 10);
-    const result = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, hash);
-    req.session.userId = result.lastInsertRowid;
+    const result = await pool.query(
+      'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id',
+      [username, hash]
+    );
+    req.session.userId = result.rows[0].id;
     req.session.username = username;
     res.json({ success: true, username });
   } catch (err) {
@@ -104,17 +110,23 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid username or password.' });
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user = result.rows[0];
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid username or password.' });
+    }
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: 'Invalid username or password.' });
+    }
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    res.json({ success: true, username: user.username });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error during login.' });
   }
-  const match = await bcrypt.compare(password, user.password_hash);
-  if (!match) {
-    return res.status(401).json({ error: 'Invalid username or password.' });
-  }
-  req.session.userId = user.id;
-  req.session.username = user.username;
-  res.json({ success: true, username: user.username });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -129,91 +141,111 @@ app.get('/api/me', (req, res) => {
   }
 });
 
-app.get('/api/profile', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, created_at FROM users WHERE id = ?').get(req.session.userId);
-  const stats = db.prepare(`
-    SELECT
-      COUNT(*) as total_trades,
-      SUM(CASE WHEN followed_plan = 'Yes' THEN 1 ELSE 0 END) as followed_count,
-      SUM(CASE WHEN result = 'Win' THEN 1 ELSE 0 END) as wins,
-      SUM(CASE WHEN result = 'Loss' THEN 1 ELSE 0 END) as losses
-    FROM journal_entries WHERE user_id = ?
-  `).get(req.session.userId);
-  res.json({ ...user, ...stats });
+app.get('/api/profile', requireAuth, async (req, res) => {
+  try {
+    const userResult = await pool.query(
+      'SELECT username, created_at FROM users WHERE id = $1',
+      [req.session.userId]
+    );
+    const statsResult = await pool.query(`
+      SELECT
+        COUNT(*) as total_trades,
+        SUM(CASE WHEN followed_plan = 'Yes' THEN 1 ELSE 0 END) as followed_count,
+        SUM(CASE WHEN result = 'Win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN result = 'Loss' THEN 1 ELSE 0 END) as losses
+      FROM journal_entries WHERE user_id = $1
+    `, [req.session.userId]);
+    res.json({ ...userResult.rows[0], ...statsResult.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error loading profile.' });
+  }
 });
 
 // ---------- Personal plan routes (chart process / entry / exit criteria) ----------
-app.get('/api/plan', requireAuth, (req, res) => {
-  let row = db.prepare('SELECT * FROM user_plans WHERE user_id = ?').get(req.session.userId);
-  if (!row) {
-    row = { chart_process: '', entry_criteria: '', exit_criteria: '' };
+app.get('/api/plan', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM user_plans WHERE user_id = $1', [req.session.userId]);
+    res.json(result.rows[0] || { chart_process: '', entry_criteria: '', exit_criteria: '' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error loading plan.' });
   }
-  res.json(row);
 });
 
-app.post('/api/plan', requireAuth, (req, res) => {
+app.post('/api/plan', requireAuth, async (req, res) => {
   const { chart_process, entry_criteria, exit_criteria } = req.body;
-  const existing = db.prepare('SELECT user_id FROM user_plans WHERE user_id = ?').get(req.session.userId);
-
-  if (existing) {
-    db.prepare(`
-      UPDATE user_plans
-      SET chart_process = ?, entry_criteria = ?, exit_criteria = ?, updated_at = datetime('now')
-      WHERE user_id = ?
-    `).run(chart_process || '', entry_criteria || '', exit_criteria || '', req.session.userId);
-  } else {
-    db.prepare(`
+  try {
+    await pool.query(`
       INSERT INTO user_plans (user_id, chart_process, entry_criteria, exit_criteria)
-      VALUES (?, ?, ?, ?)
-    `).run(req.session.userId, chart_process || '', entry_criteria || '', exit_criteria || '');
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (user_id)
+      DO UPDATE SET chart_process = $2, entry_criteria = $3, exit_criteria = $4, updated_at = NOW()
+    `, [req.session.userId, chart_process || '', entry_criteria || '', exit_criteria || '']);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error saving plan.' });
   }
-  res.json({ success: true });
 });
 
 // ---------- Journal CRUD routes ----------
-app.get('/api/journal', requireAuth, (req, res) => {
-  const rows = db.prepare(
-    'SELECT * FROM journal_entries WHERE user_id = ? ORDER BY created_at DESC'
-  ).all(req.session.userId);
-  res.json(rows);
+app.get('/api/journal', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM journal_entries WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.session.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error loading journal.' });
+  }
 });
 
-app.post('/api/journal', requireAuth, (req, res) => {
+app.post('/api/journal', requireAuth, async (req, res) => {
   const {
     trade_date, symbol, entry_price, stop_loss, take_profit,
     result, r_value, followed_plan, emotion_entry, emotion_after,
     lesson, notes
   } = req.body;
 
-  const stmt = db.prepare(`
-    INSERT INTO journal_entries
-      (user_id, trade_date, symbol, entry_price, stop_loss, take_profit,
-       result, r_value, followed_plan, emotion_entry, emotion_after, lesson, notes)
-    VALUES (@user_id, @trade_date, @symbol, @entry_price, @stop_loss, @take_profit,
-            @result, @r_value, @followed_plan, @emotion_entry, @emotion_after, @lesson, @notes)
-  `);
-  const info = stmt.run({
-    user_id: req.session.userId,
-    trade_date: trade_date || '',
-    symbol: symbol || '',
-    entry_price: entry_price || '',
-    stop_loss: stop_loss || '',
-    take_profit: take_profit || '',
-    result: result || '',
-    r_value: r_value || '',
-    followed_plan: followed_plan || '',
-    emotion_entry: emotion_entry || '',
-    emotion_after: emotion_after || '',
-    lesson: lesson || '',
-    notes: notes || ''
-  });
-  res.json({ success: true, id: info.lastInsertRowid });
+  try {
+    const insertResult = await pool.query(`
+      INSERT INTO journal_entries
+        (user_id, trade_date, symbol, entry_price, stop_loss, take_profit,
+         result, r_value, followed_plan, emotion_entry, emotion_after, lesson, notes)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+      RETURNING id
+    `, [
+      req.session.userId, trade_date || '', symbol || '', entry_price || '',
+      stop_loss || '', take_profit || '', result || '', r_value || '',
+      followed_plan || '', emotion_entry || '', emotion_after || '',
+      lesson || '', notes || ''
+    ]);
+    res.json({ success: true, id: insertResult.rows[0].id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error saving trade.' });
+  }
 });
 
-app.delete('/api/journal/:id', requireAuth, (req, res) => {
-  db.prepare('DELETE FROM journal_entries WHERE id = ? AND user_id = ?')
-    .run(req.params.id, req.session.userId);
-  res.json({ success: true });
+app.delete('/api/journal/:id', requireAuth, async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM journal_entries WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.session.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error deleting trade.' });
+  }
+});
+
+// ---------- App version (for update-available prompt) ----------
+app.get('/api/version', (req, res) => {
+  res.json({ version: require('./package.json').version });
 });
 
 // ---------- Page routing ----------
@@ -221,6 +253,13 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Trading Plan & Journal app running on http://localhost:${PORT}`);
-});
+initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Trading Plan & Journal app running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  });
