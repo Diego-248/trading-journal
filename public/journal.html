@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Journal — Trading Plan & Journal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">Trading<span>Plan</span> &amp; Journal</div>
+    <div class="nav-links">
+      <a href="index.html">Plan</a>
+      <a href="journal.html" class="active">Journal</a>
+      <span id="navUsername" style="color:var(--muted); font-size:0.85rem;"></span>
+      <button id="logoutBtn" class="btn-secondary">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <form id="journalForm">
+      <div class="card">
+        <h2>Trade Emotion Check</h2>
+        <label>Emotion when I ENTERED the trade</label>
+        <select id="emotion_entry">
+          <option>Confident</option>
+          <option>Unsure</option>
+          <option>Calm</option>
+          <option>Excited</option>
+          <option>Anxious</option>
+        </select>
+
+        <label>Emotion AFTER the trade closed</label>
+        <select id="emotion_after">
+          <option>Happy</option>
+          <option>Sad</option>
+          <option>Frustrated</option>
+          <option>Relieved</option>
+          <option>Neutral</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <h2>Trade Result Journal</h2>
+
+        <div class="grid-2">
+          <div>
+            <label for="trade_date">Date</label>
+            <input type="date" id="trade_date" required>
+          </div>
+          <div>
+            <label for="symbol">Symbol / Pair</label>
+            <input type="text" id="symbol" placeholder="e.g. EURUSD" required>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div>
+            <label for="entry_price">Entry Price</label>
+            <input type="text" id="entry_price" required>
+          </div>
+          <div>
+            <label for="stop_loss">Stop Loss</label>
+            <input type="text" id="stop_loss" required>
+          </div>
+          <div>
+            <label for="take_profit">Take Profit</label>
+            <input type="text" id="take_profit" required>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label for="result">Result</label>
+            <select id="result">
+              <option>Win</option>
+              <option>Loss</option>
+              <option>Break-even</option>
+            </select>
+          </div>
+          <div>
+            <label for="r_value">R Value</label>
+            <input type="text" id="r_value" placeholder="e.g. 2.5">
+          </div>
+        </div>
+
+        <label>Did you follow your trade plan?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="followed_plan" value="Yes" required> Yes</label>
+          <label><input type="radio" name="followed_plan" value="No"> No</label>
+        </div>
+
+        <label for="lesson">What I learned from this trade</label>
+        <textarea id="lesson" rows="3"></textarea>
+
+        <label for="notes">Additional notes</label>
+        <textarea id="notes" rows="3"></textarea>
+
+        <button type="submit" class="btn-primary">Save Trade to Journal</button>
+      </div>
+    </form>
+
+    <div class="card">
+      <h2>Journal History</h2>
+      <table id="historyTable">
+        <thead>
+          <tr>
+            <th>Date</th><th>Symbol</th><th>Result</th><th>R</th>
+            <th>Followed Plan</th><th>Emotion (entry → after)</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+      <p id="emptyState" style="color:var(--muted); display:none;">No trades logged yet.</p>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">Saved</div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/journal.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

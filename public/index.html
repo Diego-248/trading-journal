@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Plan — Trading Plan & Journal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">Trading<span>Plan</span> &amp; Journal</div>
+    <div class="nav-links">
+      <a href="index.html" class="active">Plan</a>
+      <a href="journal.html">Journal</a>
+      <span id="navUsername" style="color:var(--muted); font-size:0.85rem;"></span>
+      <button id="logoutBtn" class="btn-secondary">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <div class="card">
+      <h2>Trading Plan</h2>
+      <p style="color:var(--muted)">My trading plan is a set of rules that tells me what type of market to trade, what conditions need to be present, when to enter and exit a trade, how to manage risk, and what trades are not worth taking.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">1</span> Premarket Routine</h2>
+      <label for="premarket">Notes (news, levels, bias)</label>
+      <textarea id="premarket" rows="4" placeholder="Write your premarket checks here..."></textarea>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">2</span> Chart Process</h2>
+      <ul>
+        <li>Mark the higher timeframe trend (BOS, MSS)</li>
+        <li>Identify the swing range of the higher timeframe</li>
+        <li>Ask: are we trading in premium, discount, or midrange?</li>
+        <li>Mark liquidity (previous day high/low, equal highs/lows)</li>
+        <li>Read the story the market is telling — build a narrative</li>
+        <li>Determine if we're in continuation or reversal phase</li>
+        <li>Define your zones (supply/demand, liquidity, flip zones)</li>
+        <li>Determine your entry and exit positions</li>
+        <li>Define your invalidation</li>
+        <li>Risk only 1% of your account</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">3</span> Entry Criteria</h2>
+      <ul>
+        <li>Wait for price to mitigate the HTF/MTF POI then drop to the LTF</li>
+        <li>Look for liquidity during the reversal phase and on the left side of the market (previous price action)</li>
+        <li>Ideally see the market take out liquidity during the reversal/pullback, situated on the left side</li>
+        <li>Look for a liquidity sweep and market structure shift</li>
+        <li>Identify your zone (demand/supply, flip zone, liquidity zone)</li>
+        <li>Place your buy/sell limit order at the zone, or wait for mitigation + reversal candle</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">4</span> Exit Criteria</h2>
+      <ul>
+        <li>Stop loss: below/above the entry candle, at the swept high/low, at the protected high/low, or below demand / above supply</li>
+        <li>Take profit: at the opposing supply/demand zone, or at the next high/low</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">5</span> Post Market Routine</h2>
+      <label for="postmarket">Review your day — what went well, what to improve</label>
+      <textarea id="postmarket" rows="4" placeholder="Write your post-market review here..."></textarea>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">6</span> Plan Questions</h2>
+      <ul>
+        <li>What market conditions do I want to trade?</li>
+        <li>What makes a setup valid?</li>
+        <li>How do I manage the trade?</li>
+        <li>Where do I take profit?</li>
+        <li>When should I stay out completely?</li>
+      </ul>
+    </div>
+
+    <div class="card" style="text-align:center;">
+      <h2 style="justify-content:center;">Mindset</h2>
+      <div class="mindset-flow">
+        <div class="step">CONSISTENCY</div>
+        <div>↓</div>
+        <div class="step">COMPETENCE</div>
+        <div>↓</div>
+        <div class="step">CONFIDENCE</div>
+        <div>↓</div>
+        <div class="step">CONVICTION</div>
+        <div>↓</div>
+        <div class="step">TRUST</div>
+      </div>
+    </div>
+
+    <div class="card" style="text-align:center;">
+      <a href="journal.html"><button class="btn-primary" style="width:auto; padding:12px 28px;">Go to Trade Journal →</button></a>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">Saved</div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/plan.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

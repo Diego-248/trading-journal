@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account — Trading Plan & Journal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1>Create Account</h1>
+      <p class="subtitle">Set up your trading journal account</p>
+
+      <form id="registerForm">
+        <label for="username">Username</label>
+        <input type="text" id="username" required autocomplete="username">
+
+        <label for="password">Password</label>
+        <input type="password" id="password" required minlength="6" autocomplete="new-password">
+
+        <button type="submit" class="btn-primary">Sign Up</button>
+      </form>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <p class="switch-link">Already have an account? <a href="login.html">Log in</a></p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errorMsg.textContent = data.error || 'Registration failed.';
+          errorMsg.style.display = 'block';
+          return;
+        }
+        window.location.href = 'index.html';
+      } catch (err) {
+        errorMsg.textContent = 'Could not reach the server.';
+        errorMsg.style.display = 'block';
+      }
+    });
+  </script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
