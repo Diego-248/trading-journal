@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Identity — Trading Plan & Journal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14110b">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .step-pill {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    background: var(--panel-2); color: var(--muted); font-size: 0.78rem; margin-bottom: 10px;
+  }
+  .capture-box {
+    border: 2px dashed var(--border); border-radius: 10px; padding: 18px;
+    text-align: center; margin-top: 10px;
+  }
+  .capture-box img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+  .capture-buttons { display: flex; gap: 10px; margin-top: 10px; justify-content: center; flex-wrap: wrap; }
+  .inline-msg { font-size: 0.85rem; margin-top: 10px; display: none; }
+  .inline-msg.success { color: var(--accent); }
+  .inline-msg.error { color: var(--danger); }
+</style>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card" style="max-width: 460px;">
+      <h1>Verify Your Identity</h1>
+      <p class="subtitle">Required once, before you can use the app</p>
+
+      <div class="card" style="background:var(--panel-2);">
+        <span class="step-pill">Step 1</span>
+        <h2 style="font-size:1.05rem;">Confirm your email</h2>
+        <p style="color:var(--muted); font-size:0.85rem;">We sent a 6-digit code to your email.</p>
+        <p id="devCodeNote" style="color:var(--accent); font-weight:700; display:none;"></p>
+        <label for="emailCode">Verification code</label>
+        <input type="text" id="emailCode" placeholder="6-digit code">
+        <button class="btn-primary" id="verifyEmailBtn">Verify Email</button>
+        <p class="inline-msg" id="emailMsg"></p>
+      </div>
+
+      <div class="card" style="background:var(--panel-2);" id="identityCard">
+        <span class="step-pill">Step 2</span>
+        <h2 style="font-size:1.05rem;">Identity document</h2>
+        <label for="docType">Document type</label>
+        <select id="docType">
+          <option value="Passport">Passport</option>
+          <option value="ID card">National ID Card</option>
+          <option value="Driver's license">Driver's License</option>
+        </select>
+
+        <div class="capture-box">
+          <p style="color:var(--muted); font-size:0.85rem; margin:0;">Take a photo or choose from your gallery</p>
+          <div class="capture-buttons">
+            <button type="button" class="btn-secondary" id="idCameraBtn">📷 Take Photo</button>
+            <button type="button" class="btn-secondary" id="idGalleryBtn">🖼️ Choose from Gallery</button>
+          </div>
+          <input type="file" id="idCameraInput" accept="image/*" capture="environment" style="display:none;">
+          <input type="file" id="idGalleryInput" accept="image/*" style="display:none;">
+          <img id="idPreview" style="display:none;">
+        </div>
+      </div>
+
+      <div class="card" style="background:var(--panel-2);">
+        <span class="step-pill">Step 3</span>
+        <h2 style="font-size:1.05rem;">Facial verification (selfie)</h2>
+        <div class="capture-box">
+          <p style="color:var(--muted); font-size:0.85rem; margin:0;">Take a clear selfie facing the camera</p>
+          <div class="capture-buttons">
+            <button type="button" class="btn-secondary" id="selfieCameraBtn">🤳 Take Selfie</button>
+          </div>
+          <input type="file" id="selfieCameraInput" accept="image/*" capture="user" style="display:none;">
+          <img id="selfiePreview" style="display:none;">
+        </div>
+      </div>
+
+      <button class="btn-primary" id="submitIdentityBtn">Submit for Verification</button>
+      <p class="inline-msg" id="identityMsg"></p>
+
+      <p style="color:var(--muted); font-size:0.78rem; margin-top:14px;">
+        Your photos are stored securely with your account and used only to verify your identity.
+      </p>
+    </div>
+  </div>
+
+  <script src="js/verify.js"></script>
+</body>
+</html>
