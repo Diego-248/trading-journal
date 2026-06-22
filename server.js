@@ -10,18 +10,6 @@ const path = require('path');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
-// ---------- Stripe Identity (real liveness + document verification) ----------
-// Requires a STRIPE_SECRET_KEY environment variable. Sign up at stripe.com,
-// enable Identity in the dashboard, and grab a secret key (test mode keys
-// start with sk_test_, live keys with sk_live_). Stripe Identity charges a
-// small per-verification fee in live mode; test mode is free for development.
-let stripe = null;
-if (process.env.STRIPE_SECRET_KEY) {
-  stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-} else {
-  console.warn('STRIPE_SECRET_KEY not set — identity verification will not work until it is added.');
-}
-
 // ---------- Email sending (via Resend) ----------
 // Requires a RESEND_API_KEY environment variable. Sign up free at resend.com,
 // grab an API key from their dashboard, and add it as an env var on Render.
@@ -159,12 +147,12 @@ function requireAuth(req, res, next) {
 async function requireVerified(req, res, next) {
   try {
     const result = await pool.query(
-      'SELECT email_verified, identity_verified FROM users WHERE id = $1',
+      'SELECT email_verified FROM users WHERE id = $1',
       [req.session.userId]
     );
     const user = result.rows[0];
-    if (!user || !user.email_verified || !user.identity_verified) {
-      return res.status(403).json({ error: 'Please verify your email and identity before using this feature.' });
+    if (!user || !user.email_verified) {
+      return res.status(403).json({ error: 'Please verify your email before using this feature.' });
     }
     next();
   } catch (err) {
@@ -246,7 +234,7 @@ app.get('/api/me', (req, res) => {
 app.get('/api/verification-status', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT email_verified, identity_verified FROM users WHERE id = $1',
+      'SELECT email_verified FROM users WHERE id = $1',
       [req.session.userId]
     );
     res.json(result.rows[0]);
@@ -256,78 +244,10 @@ app.get('/api/verification-status', requireAuth, async (req, res) => {
   }
 });
 
-// ---------- Stripe Identity verification ----------
-app.post('/api/identity/create-session', requireAuth, async (req, res) => {
-  if (!stripe) {
-    return res.status(500).json({ error: 'Identity verification is not configured yet (missing Stripe key).' });
-  }
-  try {
-    const origin = req.headers.origin || `https://${req.headers.host}`;
-    const session = await stripe.identity.verificationSessions.create({
-      type: 'document',
-      options: {
-        document: {
-          require_matching_selfie: true // this is what enforces the live selfie / liveness check against the ID photo
-        }
-      },
-      return_url: `${origin}/verify.html?stripe_return=1`,
-      metadata: { user_id: String(req.session.userId) }
-    });
-    await pool.query('UPDATE users SET stripe_session_id = $1 WHERE id = $2', [session.id, req.session.userId]);
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error('Stripe session creation failed:', err);
-    res.status(500).json({ error: 'Could not start identity verification.' });
-  }
-});
-
-app.get('/api/identity/check', requireAuth, async (req, res) => {
-  if (!stripe) {
-    return res.status(500).json({ error: 'Identity verification is not configured yet (missing Stripe key).' });
-  }
-  try {
-    const result = await pool.query('SELECT stripe_session_id FROM users WHERE id = $1', [req.session.userId]);
-    const sessionId = result.rows[0]?.stripe_session_id;
-    if (!sessionId) {
-      return res.json({ status: 'not_started' });
-    }
-    const session = await stripe.identity.verificationSessions.retrieve(sessionId);
-    if (session.status === 'verified') {
-      await pool.query('UPDATE users SET identity_verified = TRUE WHERE id = $1', [req.session.userId]);
-    }
-    res.json({ status: session.status });
-  } catch (err) {
-    console.error('Stripe status check failed:', err);
-    res.status(500).json({ error: 'Could not check verification status.' });
-  }
-});
-
-// NOTE: the old manual photo-upload endpoint below is kept only as a fallback
-// for accounts created before Stripe Identity was wired in. New verifications
-// go through Stripe (see /api/identity/create-session and /api/identity/check above).
-app.post('/api/identity/submit', requireAuth, async (req, res) => {
-  const { documentType, idImage, selfieImage } = req.body;
-  if (!documentType || !idImage || !selfieImage) {
-    return res.status(400).json({ error: 'Document type, ID photo, and selfie are all required.' });
-  }
-  try {
-    await pool.query(
-      `UPDATE users
-       SET id_document_type = $1, id_document_image = $2, selfie_image = $3, identity_verified = TRUE
-       WHERE id = $4`,
-      [documentType, idImage, selfieImage, req.session.userId]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error submitting identity verification.' });
-  }
-});
-
 app.get('/api/account', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT username, email, email_verified, identity_verified, date_of_birth, created_at FROM users WHERE id = $1',
+      'SELECT username, email, email_verified, date_of_birth, created_at FROM users WHERE id = $1',
       [req.session.userId]
     );
     res.json(result.rows[0]);
@@ -389,6 +309,23 @@ app.post('/api/account/email', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error saving email.' });
+  }
+});
+
+app.post('/api/account/resend-verification', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT email FROM users WHERE id = $1', [req.session.userId]);
+    const email = result.rows[0]?.email;
+    if (!email) {
+      return res.status(400).json({ error: 'No email on file for this account.' });
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    await pool.query('UPDATE users SET verification_code = $1 WHERE id = $2', [code, req.session.userId]);
+    const emailResult = await sendVerificationEmail(email, code);
+    res.json({ success: true, emailSent: emailResult.sent, devCode: emailResult.sent ? undefined : code });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error resending code.' });
   }
 });
 
