@@ -10,6 +10,18 @@ const path = require('path');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
+// ---------- Stripe Identity (real liveness + document verification) ----------
+// Requires a STRIPE_SECRET_KEY environment variable. Sign up at stripe.com,
+// enable Identity in the dashboard, and grab a secret key (test mode keys
+// start with sk_test_, live keys with sk_live_). Stripe Identity charges a
+// small per-verification fee in live mode; test mode is free for development.
+let stripe = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+} else {
+  console.warn('STRIPE_SECRET_KEY not set — identity verification will not work until it is added.');
+}
+
 // ---------- Email sending (via Resend) ----------
 // Requires a RESEND_API_KEY environment variable. Sign up free at resend.com,
 // grab an API key from their dashboard, and add it as an env var on Render.
@@ -79,6 +91,11 @@ async function initDb() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS id_document_type TEXT;`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS id_document_image TEXT;`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS selfie_image TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_max_loss_pct TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_max_gain_pct TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_max_gain_pct TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_max_loss_pct TEXT;`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS journal_entries (
@@ -239,11 +256,55 @@ app.get('/api/verification-status', requireAuth, async (req, res) => {
   }
 });
 
-// NOTE: This endpoint stores the submitted selfie + ID photo and marks the
-// account verified immediately. There is no real biometric face-match or
-// document-authenticity check happening here — that requires a dedicated
-// identity verification provider (e.g. Stripe Identity, Persona, Onfido).
-// Wire one of those in here if you need real KYC-grade verification.
+// ---------- Stripe Identity verification ----------
+app.post('/api/identity/create-session', requireAuth, async (req, res) => {
+  if (!stripe) {
+    return res.status(500).json({ error: 'Identity verification is not configured yet (missing Stripe key).' });
+  }
+  try {
+    const origin = req.headers.origin || `https://${req.headers.host}`;
+    const session = await stripe.identity.verificationSessions.create({
+      type: 'document',
+      options: {
+        document: {
+          require_matching_selfie: true // this is what enforces the live selfie / liveness check against the ID photo
+        }
+      },
+      return_url: `${origin}/verify.html?stripe_return=1`,
+      metadata: { user_id: String(req.session.userId) }
+    });
+    await pool.query('UPDATE users SET stripe_session_id = $1 WHERE id = $2', [session.id, req.session.userId]);
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Stripe session creation failed:', err);
+    res.status(500).json({ error: 'Could not start identity verification.' });
+  }
+});
+
+app.get('/api/identity/check', requireAuth, async (req, res) => {
+  if (!stripe) {
+    return res.status(500).json({ error: 'Identity verification is not configured yet (missing Stripe key).' });
+  }
+  try {
+    const result = await pool.query('SELECT stripe_session_id FROM users WHERE id = $1', [req.session.userId]);
+    const sessionId = result.rows[0]?.stripe_session_id;
+    if (!sessionId) {
+      return res.json({ status: 'not_started' });
+    }
+    const session = await stripe.identity.verificationSessions.retrieve(sessionId);
+    if (session.status === 'verified') {
+      await pool.query('UPDATE users SET identity_verified = TRUE WHERE id = $1', [req.session.userId]);
+    }
+    res.json({ status: session.status });
+  } catch (err) {
+    console.error('Stripe status check failed:', err);
+    res.status(500).json({ error: 'Could not check verification status.' });
+  }
+});
+
+// NOTE: the old manual photo-upload endpoint below is kept only as a fallback
+// for accounts created before Stripe Identity was wired in. New verifications
+// go through Stripe (see /api/identity/create-session and /api/identity/check above).
 app.post('/api/identity/submit', requireAuth, async (req, res) => {
   const { documentType, idImage, selfieImage } = req.body;
   if (!documentType || !idImage || !selfieImage) {
@@ -347,6 +408,51 @@ app.post('/api/account/verify', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error verifying email.' });
+  }
+});
+
+app.get('/api/journal/monthly', requireAuth, requireVerified, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count
+      FROM journal_entries
+      WHERE user_id = $1
+      GROUP BY month
+      ORDER BY month DESC
+      LIMIT 12
+    `, [req.session.userId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error loading monthly trades.' });
+  }
+});
+
+app.get('/api/account/risk-settings', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT daily_max_loss_pct, daily_max_gain_pct, monthly_max_gain_pct, monthly_max_loss_pct FROM users WHERE id = $1',
+      [req.session.userId]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error loading risk settings.' });
+  }
+});
+
+app.post('/api/account/risk-settings', requireAuth, async (req, res) => {
+  const { daily_max_loss_pct, daily_max_gain_pct, monthly_max_gain_pct, monthly_max_loss_pct } = req.body;
+  try {
+    await pool.query(`
+      UPDATE users
+      SET daily_max_loss_pct = $1, daily_max_gain_pct = $2, monthly_max_gain_pct = $3, monthly_max_loss_pct = $4
+      WHERE id = $5
+    `, [daily_max_loss_pct || '', daily_max_gain_pct || '', monthly_max_gain_pct || '', monthly_max_loss_pct || '', req.session.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error saving risk settings.' });
   }
 });
 
