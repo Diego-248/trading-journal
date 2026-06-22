@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Profile — Trading Plan & Journal</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f1115">
+<meta name="theme-color" content="#14110b">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="css/style.css">
 <style>
@@ -21,17 +21,31 @@
   .avatar-add-btn {
     position: absolute; bottom: -4px; right: -4px;
     width: 26px; height: 26px; border-radius: 50%;
-    background: var(--accent); color: #0a0a0a;
+    background: var(--accent); color: #14110b;
     display: flex; align-items: center; justify-content: center;
     font-size: 1rem; font-weight: 700; border: 2px solid var(--bg);
     cursor: pointer;
   }
-  .profile-name { text-align: center; font-size: 1.3rem; font-weight: 700; }
-  .profile-since { text-align: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+  .profile-name { text-align: center; font-size: 1.3rem; font-weight: 700; margin-bottom: 18px; }
   .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .stat-box { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
   .stat-box .num { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
   .stat-box .lbl { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+
+  .month-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .month-row:last-child { border-bottom: none; }
+  .month-row .count { font-weight: 700; color: var(--accent); }
+
+  .discipline-wrap { margin-top: 10px; }
+  .discipline-bar-bg {
+    width: 100%; height: 18px; border-radius: 10px; background: var(--panel-2);
+    overflow: hidden; position: relative;
+  }
+  .discipline-bar-fill {
+    height: 100%; border-radius: 10px; transition: width 0.4s ease;
+  }
+  .discipline-label { text-align: center; margin-top: 8px; font-weight: 700; font-size: 1.1rem; }
+  .discipline-desc { text-align: center; color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -77,8 +91,41 @@
     </div>
 
     <div class="card">
-      <h2>Account</h2>
-      <p style="color:var(--muted)">More profile settings (password change, avatar upload, etc.) coming in a future update.</p>
+      <h2>Discipline Score</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">Based on how often you've followed your own trading plan.</p>
+      <div class="discipline-wrap">
+        <div class="discipline-bar-bg">
+          <div class="discipline-bar-fill" id="disciplineFill"></div>
+        </div>
+        <div class="discipline-label" id="disciplineLabel">—</div>
+        <div class="discipline-desc" id="disciplineDesc"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Total Trades Per Month</h2>
+      <div id="monthlyList"></div>
+      <p id="monthlyEmpty" style="color:var(--muted); display:none;">No trades logged yet.</p>
+    </div>
+
+    <div class="card">
+      <h2>Risk Limits</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">Set the personal risk boundaries you hold yourself to.</p>
+
+      <label for="dailyMaxLoss">Total daily max loss (%)</label>
+      <input type="number" id="dailyMaxLoss" step="0.1" placeholder="e.g. 2">
+
+      <label for="dailyMaxGain">Total daily max gain (%)</label>
+      <input type="number" id="dailyMaxGain" step="0.1" placeholder="e.g. 5">
+
+      <label for="monthlyMaxGain">Total monthly max gain (%)</label>
+      <input type="number" id="monthlyMaxGain" step="0.1" placeholder="e.g. 15">
+
+      <label for="monthlyMaxLoss">Total monthly max loss (%)</label>
+      <input type="number" id="monthlyMaxLoss" step="0.1" placeholder="e.g. 8">
+
+      <button class="btn-primary" id="saveRiskBtn">Save Risk Limits</button>
+      <p class="inline-msg" id="riskMsg" style="font-size:0.85rem; margin-top:8px; display:none; color:var(--accent);"></p>
     </div>
   </div>
 

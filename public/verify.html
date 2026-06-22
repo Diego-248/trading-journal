@@ -13,15 +13,10 @@
     display: inline-block; padding: 3px 10px; border-radius: 20px;
     background: var(--panel-2); color: var(--muted); font-size: 0.78rem; margin-bottom: 10px;
   }
-  .capture-box {
-    border: 2px dashed var(--border); border-radius: 10px; padding: 18px;
-    text-align: center; margin-top: 10px;
-  }
-  .capture-box img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
-  .capture-buttons { display: flex; gap: 10px; margin-top: 10px; justify-content: center; flex-wrap: wrap; }
   .inline-msg { font-size: 0.85rem; margin-top: 10px; display: none; }
   .inline-msg.success { color: var(--accent); }
   .inline-msg.error { color: var(--danger); }
+  .inline-msg.pending { color: var(--accent-2); }
 </style>
 </head>
 <body>
@@ -30,7 +25,7 @@
       <h1>Verify Your Identity</h1>
       <p class="subtitle">Required once, before you can use the app</p>
 
-      <div class="card" style="background:var(--panel-2);">
+      <div class="card" style="background:var(--panel-2);" id="emailCard">
         <span class="step-pill">Step 1</span>
         <h2 style="font-size:1.05rem;">Confirm your email</h2>
         <p style="color:var(--muted); font-size:0.85rem;">We sent a 6-digit code to your email.</p>
@@ -43,45 +38,15 @@
 
       <div class="card" style="background:var(--panel-2);" id="identityCard">
         <span class="step-pill">Step 2</span>
-        <h2 style="font-size:1.05rem;">Identity document</h2>
-        <label for="docType">Document type</label>
-        <select id="docType">
-          <option value="Passport">Passport</option>
-          <option value="ID card">National ID Card</option>
-          <option value="Driver's license">Driver's License</option>
-        </select>
-
-        <div class="capture-box">
-          <p style="color:var(--muted); font-size:0.85rem; margin:0;">Take a photo or choose from your gallery</p>
-          <div class="capture-buttons">
-            <button type="button" class="btn-secondary" id="idCameraBtn">📷 Take Photo</button>
-            <button type="button" class="btn-secondary" id="idGalleryBtn">🖼️ Choose from Gallery</button>
-          </div>
-          <input type="file" id="idCameraInput" accept="image/*" capture="environment" style="display:none;">
-          <input type="file" id="idGalleryInput" accept="image/*" style="display:none;">
-          <img id="idPreview" style="display:none;">
-        </div>
+        <h2 style="font-size:1.05rem;">Identity verification</h2>
+        <p style="color:var(--muted); font-size:0.85rem;">
+          Powered by Stripe Identity — you'll be asked to photograph your ID
+          (passport, ID card, or driver's license) and take a live selfie for
+          a real liveness and face-match check.
+        </p>
+        <button class="btn-primary" id="startStripeBtn">Start Identity Verification</button>
+        <p class="inline-msg" id="identityMsg"></p>
       </div>
-
-      <div class="card" style="background:var(--panel-2);">
-        <span class="step-pill">Step 3</span>
-        <h2 style="font-size:1.05rem;">Facial verification (selfie)</h2>
-        <div class="capture-box">
-          <p style="color:var(--muted); font-size:0.85rem; margin:0;">Take a clear selfie facing the camera</p>
-          <div class="capture-buttons">
-            <button type="button" class="btn-secondary" id="selfieCameraBtn">🤳 Take Selfie</button>
-          </div>
-          <input type="file" id="selfieCameraInput" accept="image/*" capture="user" style="display:none;">
-          <img id="selfiePreview" style="display:none;">
-        </div>
-      </div>
-
-      <button class="btn-primary" id="submitIdentityBtn">Submit for Verification</button>
-      <p class="inline-msg" id="identityMsg"></p>
-
-      <p style="color:var(--muted); font-size:0.78rem; margin-top:14px;">
-        Your photos are stored securely with your account and used only to verify your identity.
-      </p>
     </div>
   </div>
 
