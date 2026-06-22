@@ -26,9 +26,16 @@ async function initDb() {
       id SERIAL PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
+      email TEXT,
+      email_verified BOOLEAN DEFAULT FALSE,
+      verification_code TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  // Add columns if upgrading from an older version that didn't have them
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code TEXT;`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS journal_entries (
@@ -144,6 +151,82 @@ app.get('/api/me', (req, res) => {
     res.json({ loggedIn: true, username: req.session.username });
   } else {
     res.json({ loggedIn: false });
+  }
+});
+
+// ---------- Account management routes ----------
+app.get('/api/account', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT username, email, email_verified, created_at FROM users WHERE id = $1',
+      [req.session.userId]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error loading account.' });
+  }
+});
+
+app.post('/api/account/password', requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  }
+  try {
+    const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.session.userId]);
+    const user = result.rows[0];
+    const match = await bcrypt.compare(currentPassword || '', user.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.session.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error changing password.' });
+  }
+});
+
+app.post('/api/account/email', requireAuth, async (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
+  try {
+    // Generate a simple 6-digit verification code.
+    // NOTE: this app has no email-sending service connected yet, so the code
+    // is returned directly in the response instead of being emailed. To send
+    // real verification emails, connect a provider like Resend or SendGrid.
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    await pool.query(
+      'UPDATE users SET email = $1, email_verified = FALSE, verification_code = $2 WHERE id = $3',
+      [email, code, req.session.userId]
+    );
+    res.json({ success: true, devCode: code });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error saving email.' });
+  }
+});
+
+app.post('/api/account/verify', requireAuth, async (req, res) => {
+  const { code } = req.body;
+  try {
+    const result = await pool.query('SELECT verification_code FROM users WHERE id = $1', [req.session.userId]);
+    const user = result.rows[0];
+    if (!user.verification_code || code !== user.verification_code) {
+      return res.status(400).json({ error: 'Incorrect verification code.' });
+    }
+    await pool.query(
+      'UPDATE users SET email_verified = TRUE, verification_code = NULL WHERE id = $1',
+      [req.session.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error verifying email.' });
   }
 });
 
