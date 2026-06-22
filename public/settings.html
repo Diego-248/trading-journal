@@ -5,17 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Settings — Trading Plan & Journal</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f1115">
+<meta name="theme-color" content="#14110b">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="css/style.css">
 <style>
   .settings-item {
-    display: flex; align-items: center; justify-content: space-between;
     padding: 14px 0; border-bottom: 1px solid var(--border);
   }
   .settings-item:last-child { border-bottom: none; }
   .settings-item .label { font-weight: 600; }
-  .settings-item .desc { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+  .settings-item .desc { color: var(--muted); font-size: 0.85rem; margin-top: 2px; margin-bottom: 10px; }
+  .inline-msg { font-size: 0.85rem; margin-top: 8px; display: none; }
+  .inline-msg.success { color: var(--accent); }
+  .inline-msg.error { color: var(--danger); }
+  .verified-tag { color: var(--accent); font-size: 0.8rem; font-weight: 600; }
+  .unverified-tag { color: var(--danger); font-size: 0.8rem; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -32,22 +36,53 @@
   </nav>
 
   <div class="container">
+
     <div class="card">
-      <h2>Settings</h2>
-
+      <h2>Account Information</h2>
       <div class="settings-item">
-        <div>
-          <div class="label">App version</div>
-          <div class="desc" id="appVersion">—</div>
-        </div>
+        <div class="label">Username</div>
+        <div class="desc" id="infoUsername">—</div>
       </div>
-
       <div class="settings-item">
-        <div>
-          <div class="label">Account</div>
-          <div class="desc">Password change and other account options coming soon.</div>
-        </div>
+        <div class="label">Email</div>
+        <div class="desc" id="infoEmail">No email added yet</div>
       </div>
+      <div class="settings-item">
+        <div class="label">App version</div>
+        <div class="desc" id="appVersion">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Add / Update Email</h2>
+      <label for="emailInput">Email address</label>
+      <input type="email" id="emailInput" placeholder="you@example.com">
+      <button class="btn-primary" id="saveEmailBtn">Save Email</button>
+      <p class="inline-msg" id="emailMsg"></p>
+    </div>
+
+    <div class="card" id="verifyCard" style="display:none;">
+      <h2>Verify Identity</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">
+        Enter the verification code shown below. (This app doesn't have an email-sending service connected yet,
+        so the code is shown directly here instead of being emailed — once an email service is added, this would
+        be sent to your inbox instead.)
+      </p>
+      <p style="color:var(--accent); font-weight:700;" id="devCodeDisplay"></p>
+      <label for="codeInput">Verification code</label>
+      <input type="text" id="codeInput" placeholder="6-digit code">
+      <button class="btn-primary" id="verifyBtn">Verify</button>
+      <p class="inline-msg" id="verifyMsg"></p>
+    </div>
+
+    <div class="card">
+      <h2>Change Password</h2>
+      <label for="currentPassword">Current password</label>
+      <input type="password" id="currentPassword">
+      <label for="newPassword">New password</label>
+      <input type="password" id="newPassword" minlength="6">
+      <button class="btn-primary" id="changePasswordBtn">Change Password</button>
+      <p class="inline-msg" id="passwordMsg"></p>
     </div>
 
     <div class="card">
