@@ -10,6 +10,44 @@ const path = require('path');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
+// ---------- Email sending (via Resend) ----------
+// Requires a RESEND_API_KEY environment variable. Sign up free at resend.com,
+// grab an API key from their dashboard, and add it as an env var on Render.
+// NOTE: until you verify your own domain on Resend, their sandbox sender
+// (onboarding@resend.dev) can only deliver to the email address you signed
+// up to Resend with — for sending to ANY user's email, verify a domain there.
+async function sendVerificationEmail(toEmail, code) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('RESEND_API_KEY not set — skipping real email send.');
+    return { sent: false };
+  }
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+        to: toEmail,
+        subject: 'Verify your email — Trading Plan & Journal',
+        html: `<p>Your verification code is:</p><h2>${code}</h2><p>Enter this code in the app to verify your email.</p>`
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Resend error:', errText);
+      return { sent: false };
+    }
+    return { sent: true };
+  } catch (err) {
+    console.error('Email send failed:', err);
+    return { sent: false };
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -36,6 +74,11 @@ async function initDb() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_verified BOOLEAN DEFAULT FALSE;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS id_document_type TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS id_document_image TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS selfie_image TEXT;`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS journal_entries (
@@ -96,25 +139,53 @@ function requireAuth(req, res, next) {
   next();
 }
 
+async function requireVerified(req, res, next) {
+  try {
+    const result = await pool.query(
+      'SELECT email_verified, identity_verified FROM users WHERE id = $1',
+      [req.session.userId]
+    );
+    const user = result.rows[0];
+    if (!user || !user.email_verified || !user.identity_verified) {
+      return res.status(403).json({ error: 'Please verify your email and identity before using this feature.' });
+    }
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error checking verification status.' });
+  }
+}
+
 // ---------- Auth routes ----------
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password || password.length < 6) {
-    return res.status(400).json({ error: 'Username required, password must be 6+ characters.' });
+  const { email, password } = req.body;
+  if (!email || !email.includes('@') || !password || password.length < 6) {
+    return res.status(400).json({ error: 'Valid email required, password must be 6+ characters.' });
   }
   try {
-    const existing = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length) {
-      return res.status(409).json({ error: 'Username already taken.' });
+      return res.status(409).json({ error: 'An account with this email already exists.' });
     }
     const hash = await bcrypt.hash(password, 10);
+    // Auto-generate a display username from the email (e.g. "diego" from "diego@gmail.com")
+    let username = email.split('@')[0];
+    const usernameTaken = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (usernameTaken.rows.length) {
+      username = username + Math.floor(Math.random() * 10000);
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
     const result = await pool.query(
-      'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id',
-      [username, hash]
+      `INSERT INTO users (username, password_hash, email, verification_code)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [username, hash, email, code]
     );
     req.session.userId = result.rows[0].id;
     req.session.username = username;
-    res.json({ success: true, username });
+
+    const emailResult = await sendVerificationEmail(email, code);
+    res.json({ success: true, username, emailSent: emailResult.sent, devCode: emailResult.sent ? undefined : code });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error during registration.' });
@@ -122,16 +193,16 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
   try {
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
     if (!user) {
-      return res.status(401).json({ error: 'Invalid username or password.' });
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
-      return res.status(401).json({ error: 'Invalid username or password.' });
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
     req.session.userId = user.id;
     req.session.username = user.username;
@@ -155,16 +226,64 @@ app.get('/api/me', (req, res) => {
 });
 
 // ---------- Account management routes ----------
+app.get('/api/verification-status', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT email_verified, identity_verified FROM users WHERE id = $1',
+      [req.session.userId]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error checking status.' });
+  }
+});
+
+// NOTE: This endpoint stores the submitted selfie + ID photo and marks the
+// account verified immediately. There is no real biometric face-match or
+// document-authenticity check happening here — that requires a dedicated
+// identity verification provider (e.g. Stripe Identity, Persona, Onfido).
+// Wire one of those in here if you need real KYC-grade verification.
+app.post('/api/identity/submit', requireAuth, async (req, res) => {
+  const { documentType, idImage, selfieImage } = req.body;
+  if (!documentType || !idImage || !selfieImage) {
+    return res.status(400).json({ error: 'Document type, ID photo, and selfie are all required.' });
+  }
+  try {
+    await pool.query(
+      `UPDATE users
+       SET id_document_type = $1, id_document_image = $2, selfie_image = $3, identity_verified = TRUE
+       WHERE id = $4`,
+      [documentType, idImage, selfieImage, req.session.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error submitting identity verification.' });
+  }
+});
+
 app.get('/api/account', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT username, email, email_verified, created_at FROM users WHERE id = $1',
+      'SELECT username, email, email_verified, identity_verified, date_of_birth, created_at FROM users WHERE id = $1',
       [req.session.userId]
     );
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error loading account.' });
+  }
+});
+
+app.post('/api/account/dob', requireAuth, async (req, res) => {
+  const { date_of_birth } = req.body;
+  try {
+    await pool.query('UPDATE users SET date_of_birth = $1 WHERE id = $2', [date_of_birth || '', req.session.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error saving date of birth.' });
   }
 });
 
@@ -204,7 +323,8 @@ app.post('/api/account/email', requireAuth, async (req, res) => {
       'UPDATE users SET email = $1, email_verified = FALSE, verification_code = $2 WHERE id = $3',
       [email, code, req.session.userId]
     );
-    res.json({ success: true, devCode: code });
+    const emailResult = await sendVerificationEmail(email, code);
+    res.json({ success: true, emailSent: emailResult.sent, devCode: emailResult.sent ? undefined : code });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error saving email.' });
@@ -252,7 +372,7 @@ app.get('/api/profile', requireAuth, async (req, res) => {
 });
 
 // ---------- Personal plan routes (chart process / entry / exit criteria) ----------
-app.get('/api/plan', requireAuth, async (req, res) => {
+app.get('/api/plan', requireAuth, requireVerified, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM user_plans WHERE user_id = $1', [req.session.userId]);
     res.json(result.rows[0] || { chart_process: '', entry_criteria: '', exit_criteria: '' });
@@ -262,7 +382,7 @@ app.get('/api/plan', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/plan', requireAuth, async (req, res) => {
+app.post('/api/plan', requireAuth, requireVerified, async (req, res) => {
   const { chart_process, entry_criteria, exit_criteria } = req.body;
   try {
     await pool.query(`
@@ -279,7 +399,7 @@ app.post('/api/plan', requireAuth, async (req, res) => {
 });
 
 // ---------- Journal CRUD routes ----------
-app.get('/api/journal', requireAuth, async (req, res) => {
+app.get('/api/journal', requireAuth, requireVerified, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM journal_entries WHERE user_id = $1 ORDER BY created_at DESC',
@@ -292,7 +412,7 @@ app.get('/api/journal', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/journal', requireAuth, async (req, res) => {
+app.post('/api/journal', requireAuth, requireVerified, async (req, res) => {
   const {
     trade_date, symbol, entry_price, stop_loss, take_profit,
     result, r_value, followed_plan, emotion_entry, emotion_after,
@@ -319,7 +439,7 @@ app.post('/api/journal', requireAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/journal/:id', requireAuth, async (req, res) => {
+app.delete('/api/journal/:id', requireAuth, requireVerified, async (req, res) => {
   try {
     await pool.query(
       'DELETE FROM journal_entries WHERE id = $1 AND user_id = $2',
