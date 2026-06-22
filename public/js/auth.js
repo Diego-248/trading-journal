@@ -8,13 +8,11 @@ async function requireLogin(skipVerificationCheck) {
       window.location.href = 'login.html';
       return null;
     }
-    const el = document.getElementById('navUsername');
-    if (el) el.textContent = data.username;
 
     if (!skipVerificationCheck) {
       const statusRes = await fetch('/api/verification-status');
       const status = await statusRes.json();
-      if (!status.email_verified || !status.identity_verified) {
+      if (!status.email_verified) {
         window.location.href = 'verify.html';
         return null;
       }
@@ -59,10 +57,10 @@ function showUpdateBanner(registration) {
   document.body.appendChild(banner);
 
   document.getElementById('updateNowBtn').addEventListener('click', async () => {
-    banner.querySelector('span').textContent = 'Downloading the new version...';
+    banner.querySelector('span').textContent = 'Opening your browser to download the update...';
     document.getElementById('updateNowBtn').disabled = true;
 
-    // Clear the old cached files so nothing stale is reused
+    // Clear old cached files so the browser pulls everything fresh
     try {
       const keys = await caches.keys();
       await Promise.all(keys.map((k) => caches.delete(k)));
@@ -71,10 +69,11 @@ function showUpdateBanner(registration) {
     if (registration.waiting) {
       registration.waiting.postMessage('skipWaiting');
     }
-    // Hard reload straight from the network, bypassing any cache
-    setTimeout(() => {
-      window.location.href = window.location.pathname + '?fresh=' + Date.now();
-    }, 400);
+
+    // Send the user out to their actual browser (not the installed app window)
+    // to fetch the new version directly from the server.
+    const freshUrl = window.location.origin + '/login.html?fresh=' + Date.now();
+    window.open(freshUrl, '_blank');
   });
 }
 

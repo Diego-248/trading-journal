@@ -1,6 +1,5 @@
-// verify.js - handles email code verification + Stripe Identity verification
+// verify.js - handles email verification code entry, resend, and redirect once verified
 
-// Show the dev fallback code if no real email service is connected yet
 const devCode = sessionStorage.getItem('devVerifyCode');
 if (devCode) {
   const note = document.getElementById('devCodeNote');
@@ -14,8 +13,6 @@ function showMsg(el, text, type) {
   el.style.display = 'block';
 }
 
-// Check current status on load; if already fully verified, skip straight in.
-// Also handles the redirect Stripe sends the user back to after their flow.
 (async function checkStatus() {
   try {
     const res = await fetch('/api/verification-status');
@@ -24,53 +21,14 @@ function showMsg(el, text, type) {
       return;
     }
     const data = await res.json();
-    if (data.email_verified && data.identity_verified) {
-      window.location.href = 'index.html';
-      return;
-    }
     if (data.email_verified) {
-      document.getElementById('emailCard').style.opacity = '0.5';
-      document.getElementById('emailCard').style.pointerEvents = 'none';
-    }
-
-    // Returning from Stripe's hosted verification flow?
-    if (window.location.search.includes('stripe_return=1')) {
-      const msgEl = document.getElementById('identityMsg');
-      showMsg(msgEl, 'Checking your verification result...', 'pending');
-      pollStripeStatus();
+      window.location.href = 'index.html';
     }
   } catch (err) {
     console.error(err);
   }
 })();
 
-async function pollStripeStatus(attempt) {
-  attempt = attempt || 0;
-  const msgEl = document.getElementById('identityMsg');
-  try {
-    const res = await fetch('/api/identity/check');
-    const data = await res.json();
-    if (data.status === 'verified') {
-      showMsg(msgEl, 'Identity verified! Taking you to the app...', 'success');
-      setTimeout(() => window.location.href = 'index.html', 1200);
-      return;
-    }
-    if (data.status === 'requires_input' || data.status === 'processing') {
-      if (attempt < 5) {
-        showMsg(msgEl, 'Still processing your verification...', 'pending');
-        setTimeout(() => pollStripeStatus(attempt + 1), 2500);
-      } else {
-        showMsg(msgEl, 'Still processing — check back in a minute, or try again.', 'pending');
-      }
-      return;
-    }
-    showMsg(msgEl, 'Verification was not completed. Please try again.', 'error');
-  } catch (err) {
-    showMsg(msgEl, 'Could not check verification status.', 'error');
-  }
-}
-
-// Email verification
 document.getElementById('verifyEmailBtn').addEventListener('click', async () => {
   const code = document.getElementById('emailCode').value.trim();
   const msgEl = document.getElementById('emailMsg');
@@ -85,24 +43,29 @@ document.getElementById('verifyEmailBtn').addEventListener('click', async () => 
       showMsg(msgEl, data.error || 'Incorrect code.', 'error');
       return;
     }
-    showMsg(msgEl, 'Email verified! Continue to identity verification below.', 'success');
-    document.getElementById('emailCard').style.opacity = '0.5';
+    sessionStorage.removeItem('devVerifyCode');
+    showMsg(msgEl, 'Email verified! Taking you to the app...', 'success');
+    setTimeout(() => window.location.href = 'index.html', 1000);
   } catch (err) {
     showMsg(msgEl, 'Could not reach the server.', 'error');
   }
 });
 
-// Start Stripe Identity flow
-document.getElementById('startStripeBtn').addEventListener('click', async () => {
-  const msgEl = document.getElementById('identityMsg');
+document.getElementById('resendBtn').addEventListener('click', async () => {
+  const msgEl = document.getElementById('emailMsg');
   try {
-    const res = await fetch('/api/identity/create-session', { method: 'POST' });
+    const res = await fetch('/api/account/resend-verification', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) {
-      showMsg(msgEl, data.error || 'Could not start verification.', 'error');
+      showMsg(msgEl, data.error || 'Could not resend code.', 'error');
       return;
     }
-    window.location.href = data.url; // Stripe's hosted verification flow
+    if (!data.emailSent && data.devCode) {
+      sessionStorage.setItem('devVerifyCode', data.devCode);
+      document.getElementById('devCodeNote').textContent = 'No email service connected yet — your code is: ' + data.devCode;
+      document.getElementById('devCodeNote').style.display = 'block';
+    }
+    showMsg(msgEl, 'A new code has been sent.', 'success');
   } catch (err) {
     showMsg(msgEl, 'Could not reach the server.', 'error');
   }

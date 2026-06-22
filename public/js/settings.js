@@ -1,5 +1,5 @@
 // settings.js - guards the page, loads account info, and handles
-// email add/verify and password change.
+// email add/verify/update, date of birth, and password change.
 
 requireLogin();
 
@@ -22,28 +22,51 @@ async function loadAccount() {
     const res = await fetch('/api/account');
     const data = await res.json();
     document.getElementById('infoUsername').textContent = data.username || '—';
-    if (data.date_of_birth) {
-      document.getElementById('dobInput').value = data.date_of_birth;
-    }
 
+    // ---- Email section ----
     const emailEl = document.getElementById('infoEmail');
+    const emailEditWrap = document.getElementById('emailEditWrap');
+    const updateEmailBtn = document.getElementById('updateEmailBtn');
     const verifyCard = document.getElementById('verifyCard');
+
     if (data.email) {
       const tag = data.email_verified
         ? '<span class="verified-tag">Verified</span>'
         : '<span class="unverified-tag">Not verified</span>';
       emailEl.innerHTML = `${data.email} &nbsp; ${tag}`;
       document.getElementById('emailInput').value = data.email;
+      // Email already set: hide the Save flow, show Update button instead
+      emailEditWrap.style.display = 'none';
+      updateEmailBtn.style.display = 'block';
       verifyCard.style.display = data.email_verified ? 'none' : 'block';
     } else {
       emailEl.textContent = 'No email added yet';
+      emailEditWrap.style.display = 'block';
+      updateEmailBtn.style.display = 'none';
       verifyCard.style.display = 'none';
+    }
+
+    // ---- Date of birth section ----
+    const dobEditWrap = document.getElementById('dobEditWrap');
+    const dobDisplay = document.getElementById('dobDisplay');
+    if (data.date_of_birth) {
+      dobDisplay.textContent = new Date(data.date_of_birth).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+      dobDisplay.style.display = 'block';
+      dobEditWrap.style.display = 'none';
+    } else {
+      dobDisplay.style.display = 'none';
+      dobEditWrap.style.display = 'block';
     }
   } catch (err) {
     console.error('Could not load account', err);
   }
 }
 loadAccount();
+
+document.getElementById('updateEmailBtn').addEventListener('click', () => {
+  document.getElementById('emailEditWrap').style.display = 'block';
+  document.getElementById('updateEmailBtn').style.display = 'none';
+});
 
 document.getElementById('saveEmailBtn').addEventListener('click', async () => {
   const email = document.getElementById('emailInput').value.trim();
@@ -59,8 +82,14 @@ document.getElementById('saveEmailBtn').addEventListener('click', async () => {
       showMsg(msgEl, data.error || 'Could not save email.', 'error');
       return;
     }
-    showMsg(msgEl, 'Email saved. Please verify it below.', 'success');
-    document.getElementById('devCodeDisplay').textContent = 'Your code: ' + data.devCode;
+    if (data.emailSent) {
+      showMsg(msgEl, 'Email saved. A verification code was sent to your inbox.', 'success');
+    } else {
+      showMsg(msgEl, 'Email saved. (No email service connected yet — code shown below.)', 'success');
+      if (data.devCode) {
+        document.getElementById('devCodeDisplay').textContent = 'Your code: ' + data.devCode;
+      }
+    }
     document.getElementById('verifyCard').style.display = 'block';
     loadAccount();
   } catch (err) {
@@ -89,6 +118,27 @@ document.getElementById('verifyBtn').addEventListener('click', async () => {
   }
 });
 
+document.getElementById('saveDobBtn').addEventListener('click', async () => {
+  const dob = document.getElementById('dobInput').value;
+  const msgEl = document.getElementById('dobMsg');
+  try {
+    const res = await fetch('/api/account/dob', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date_of_birth: dob })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMsg(msgEl, data.error || 'Could not save date of birth.', 'error');
+      return;
+    }
+    showMsg(msgEl, 'Date of birth saved.', 'success');
+    loadAccount();
+  } catch (err) {
+    showMsg(msgEl, 'Could not reach the server.', 'error');
+  }
+});
+
 document.getElementById('changePasswordBtn').addEventListener('click', async () => {
   const currentPassword = document.getElementById('currentPassword').value;
   const newPassword = document.getElementById('newPassword').value;
@@ -107,26 +157,6 @@ document.getElementById('changePasswordBtn').addEventListener('click', async () 
     showMsg(msgEl, 'Password changed successfully.', 'success');
     document.getElementById('currentPassword').value = '';
     document.getElementById('newPassword').value = '';
-  } catch (err) {
-    showMsg(msgEl, 'Could not reach the server.', 'error');
-  }
-});
-
-document.getElementById('saveDobBtn').addEventListener('click', async () => {
-  const dob = document.getElementById('dobInput').value;
-  const msgEl = document.getElementById('dobMsg');
-  try {
-    const res = await fetch('/api/account/dob', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date_of_birth: dob })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      showMsg(msgEl, data.error || 'Could not save date of birth.', 'error');
-      return;
-    }
-    showMsg(msgEl, 'Date of birth saved.', 'success');
   } catch (err) {
     showMsg(msgEl, 'Could not reach the server.', 'error');
   }
