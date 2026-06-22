@@ -3,49 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verify Identity — Trading Plan & Journal</title>
+<title>Verify Email — Trading Plan & Journal</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#14110b">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .step-pill {
-    display: inline-block; padding: 3px 10px; border-radius: 20px;
-    background: var(--panel-2); color: var(--muted); font-size: 0.78rem; margin-bottom: 10px;
-  }
   .inline-msg { font-size: 0.85rem; margin-top: 10px; display: none; }
   .inline-msg.success { color: var(--accent); }
   .inline-msg.error { color: var(--danger); }
-  .inline-msg.pending { color: var(--accent-2); }
 </style>
 </head>
 <body>
   <div class="auth-wrap">
-    <div class="auth-card" style="max-width: 460px;">
-      <h1>Verify Your Identity</h1>
+    <div class="auth-card">
+      <h1>Verify Your Email</h1>
       <p class="subtitle">Required once, before you can use the app</p>
 
-      <div class="card" style="background:var(--panel-2);" id="emailCard">
-        <span class="step-pill">Step 1</span>
-        <h2 style="font-size:1.05rem;">Confirm your email</h2>
+      <div class="card" style="background:var(--panel-2);">
         <p style="color:var(--muted); font-size:0.85rem;">We sent a 6-digit code to your email.</p>
         <p id="devCodeNote" style="color:var(--accent); font-weight:700; display:none;"></p>
         <label for="emailCode">Verification code</label>
         <input type="text" id="emailCode" placeholder="6-digit code">
         <button class="btn-primary" id="verifyEmailBtn">Verify Email</button>
         <p class="inline-msg" id="emailMsg"></p>
-      </div>
-
-      <div class="card" style="background:var(--panel-2);" id="identityCard">
-        <span class="step-pill">Step 2</span>
-        <h2 style="font-size:1.05rem;">Identity verification</h2>
-        <p style="color:var(--muted); font-size:0.85rem;">
-          Powered by Stripe Identity — you'll be asked to photograph your ID
-          (passport, ID card, or driver's license) and take a live selfie for
-          a real liveness and face-match check.
-        </p>
-        <button class="btn-primary" id="startStripeBtn">Start Identity Verification</button>
-        <p class="inline-msg" id="identityMsg"></p>
+        <button class="btn-secondary" id="resendBtn" style="margin-top:14px;">Resend Code</button>
       </div>
     </div>
   </div>

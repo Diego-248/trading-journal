@@ -18,34 +18,12 @@
       <a href="history.html">History</a>
       <a href="profile.html">Profile</a>
       <a href="settings.html">Settings</a>
-      <span id="navUsername" style="color:var(--muted); font-size:0.85rem;"></span>
     </div>
   </nav>
 
   <div class="container">
 
     <form id="journalForm">
-      <div class="card">
-        <h2>Trade Emotion Check</h2>
-        <label>Emotion when I ENTERED the trade</label>
-        <select id="emotion_entry">
-          <option>Confident</option>
-          <option>Unsure</option>
-          <option>Calm</option>
-          <option>Excited</option>
-          <option>Anxious</option>
-        </select>
-
-        <label>Emotion AFTER the trade closed</label>
-        <select id="emotion_after">
-          <option>Happy</option>
-          <option>Sad</option>
-          <option>Frustrated</option>
-          <option>Relieved</option>
-          <option>Neutral</option>
-        </select>
-      </div>
-
       <div class="card">
         <h2>Trade Result Journal</h2>
 
@@ -101,6 +79,27 @@
 
         <label for="lesson">What I learned from this trade</label>
         <textarea id="lesson" rows="3"></textarea>
+      </div>
+
+      <div class="card">
+        <h2>Trade Emotion Check</h2>
+        <label>Emotion when I ENTERED the trade</label>
+        <select id="emotion_entry">
+          <option>Confident</option>
+          <option>Unsure</option>
+          <option>Calm</option>
+          <option>Excited</option>
+          <option>Anxious</option>
+        </select>
+
+        <label>Emotion AFTER the trade closed</label>
+        <select id="emotion_after">
+          <option>Happy</option>
+          <option>Sad</option>
+          <option>Frustrated</option>
+          <option>Relieved</option>
+          <option>Neutral</option>
+        </select>
 
         <button type="submit" class="btn-primary">Save Trade to Journal</button>
       </div>

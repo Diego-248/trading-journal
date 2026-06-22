@@ -9,9 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .settings-item {
-    padding: 14px 0; border-bottom: 1px solid var(--border);
-  }
+  .settings-item { padding: 14px 0; border-bottom: 1px solid var(--border); }
   .settings-item:last-child { border-bottom: none; }
   .settings-item .label { font-weight: 600; }
   .settings-item .desc { color: var(--muted); font-size: 0.85rem; margin-top: 2px; margin-bottom: 10px; }
@@ -31,7 +29,6 @@
       <a href="history.html">History</a>
       <a href="profile.html">Profile</a>
       <a href="settings.html" class="active">Settings</a>
-      <span id="navUsername" style="color:var(--muted); font-size:0.85rem;"></span>
     </div>
   </nav>
 
@@ -44,41 +41,42 @@
         <div class="desc" id="infoUsername">—</div>
       </div>
       <div class="settings-item">
-        <div class="label">Email</div>
-        <div class="desc" id="infoEmail">No email added yet</div>
-      </div>
-      <div class="settings-item">
-        <div class="label">Date of Birth</div>
-        <input type="date" id="dobInput" style="margin-top:6px;">
-        <button class="btn-secondary" id="saveDobBtn" style="margin-top:10px;">Save</button>
-        <p class="inline-msg" id="dobMsg"></p>
-      </div>
-      <div class="settings-item">
         <div class="label">App version</div>
         <div class="desc" id="appVersion">—</div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Add / Update Email</h2>
-      <label for="emailInput">Email address</label>
-      <input type="email" id="emailInput" placeholder="you@example.com">
-      <button class="btn-primary" id="saveEmailBtn">Save Email</button>
+      <h2>Email</h2>
+      <div class="desc" id="infoEmail" style="margin-bottom:10px;">No email added yet</div>
+
+      <div id="emailEditWrap">
+        <label for="emailInput">Email address</label>
+        <input type="email" id="emailInput" placeholder="you@example.com">
+        <button class="btn-primary" id="saveEmailBtn">Save Email</button>
+      </div>
+      <button class="btn-secondary" id="updateEmailBtn" style="display:none;">Update Email</button>
       <p class="inline-msg" id="emailMsg"></p>
     </div>
 
     <div class="card" id="verifyCard" style="display:none;">
-      <h2>Verify Identity</h2>
-      <p style="color:var(--muted); font-size:0.85rem;">
-        Enter the verification code shown below. (This app doesn't have an email-sending service connected yet,
-        so the code is shown directly here instead of being emailed — once an email service is added, this would
-        be sent to your inbox instead.)
-      </p>
+      <h2>Verify Email</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">Enter the code we sent to your email.</p>
       <p style="color:var(--accent); font-weight:700;" id="devCodeDisplay"></p>
       <label for="codeInput">Verification code</label>
       <input type="text" id="codeInput" placeholder="6-digit code">
       <button class="btn-primary" id="verifyBtn">Verify</button>
       <p class="inline-msg" id="verifyMsg"></p>
+    </div>
+
+    <div class="card">
+      <h2>Date of Birth</h2>
+      <div id="dobEditWrap">
+        <input type="date" id="dobInput">
+        <button class="btn-secondary" id="saveDobBtn" style="margin-top:10px;">Save</button>
+      </div>
+      <p class="desc" id="dobDisplay" style="display:none;"></p>
+      <p class="inline-msg" id="dobMsg"></p>
     </div>
 
     <div class="card">

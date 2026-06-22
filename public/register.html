@@ -51,7 +51,7 @@
           errorMsg.style.display = 'block';
           return;
         }
-        // New accounts go straight to identity verification before anything else
+        // New accounts go straight to email verification before anything else
         if (!data.emailSent && data.devCode) {
           sessionStorage.setItem('devVerifyCode', data.devCode);
         }
