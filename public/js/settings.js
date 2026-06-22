@@ -22,6 +22,9 @@ async function loadAccount() {
     const res = await fetch('/api/account');
     const data = await res.json();
     document.getElementById('infoUsername').textContent = data.username || '—';
+    if (data.date_of_birth) {
+      document.getElementById('dobInput').value = data.date_of_birth;
+    }
 
     const emailEl = document.getElementById('infoEmail');
     const verifyCard = document.getElementById('verifyCard');
@@ -104,6 +107,26 @@ document.getElementById('changePasswordBtn').addEventListener('click', async () 
     showMsg(msgEl, 'Password changed successfully.', 'success');
     document.getElementById('currentPassword').value = '';
     document.getElementById('newPassword').value = '';
+  } catch (err) {
+    showMsg(msgEl, 'Could not reach the server.', 'error');
+  }
+});
+
+document.getElementById('saveDobBtn').addEventListener('click', async () => {
+  const dob = document.getElementById('dobInput').value;
+  const msgEl = document.getElementById('dobMsg');
+  try {
+    const res = await fetch('/api/account/dob', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date_of_birth: dob })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMsg(msgEl, data.error || 'Could not save date of birth.', 'error');
+      return;
+    }
+    showMsg(msgEl, 'Date of birth saved.', 'success');
   } catch (err) {
     showMsg(msgEl, 'Could not reach the server.', 'error');
   }

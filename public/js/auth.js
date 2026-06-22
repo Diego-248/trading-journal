@@ -1,6 +1,6 @@
 // auth.js - shared session check + logout handling + "new version available" prompt
 
-async function requireLogin() {
+async function requireLogin(skipVerificationCheck) {
   try {
     const res = await fetch('/api/me');
     const data = await res.json();
@@ -10,6 +10,15 @@ async function requireLogin() {
     }
     const el = document.getElementById('navUsername');
     if (el) el.textContent = data.username;
+
+    if (!skipVerificationCheck) {
+      const statusRes = await fetch('/api/verification-status');
+      const status = await statusRes.json();
+      if (!status.email_verified || !status.identity_verified) {
+        window.location.href = 'verify.html';
+        return null;
+      }
+    }
     return data.username;
   } catch (err) {
     window.location.href = 'login.html';
