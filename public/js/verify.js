@@ -1,7 +1,4 @@
-// verify.js - handles email code verification + ID/selfie capture and submission
-
-let idImageData = null;
-let selfieImageData = null;
+// verify.js - handles email code verification + Stripe Identity verification
 
 // Show the dev fallback code if no real email service is connected yet
 const devCode = sessionStorage.getItem('devVerifyCode');
@@ -11,7 +8,14 @@ if (devCode) {
   note.style.display = 'block';
 }
 
-// Check current status on load; if already fully verified, skip straight in
+function showMsg(el, text, type) {
+  el.textContent = text;
+  el.className = 'inline-msg ' + type;
+  el.style.display = 'block';
+}
+
+// Check current status on load; if already fully verified, skip straight in.
+// Also handles the redirect Stripe sends the user back to after their flow.
 (async function checkStatus() {
   try {
     const res = await fetch('/api/verification-status');
@@ -25,24 +29,45 @@ if (devCode) {
       return;
     }
     if (data.email_verified) {
-      document.querySelector('.card').style.opacity = '0.5';
-      document.querySelector('.card').style.pointerEvents = 'none';
+      document.getElementById('emailCard').style.opacity = '0.5';
+      document.getElementById('emailCard').style.pointerEvents = 'none';
+    }
+
+    // Returning from Stripe's hosted verification flow?
+    if (window.location.search.includes('stripe_return=1')) {
+      const msgEl = document.getElementById('identityMsg');
+      showMsg(msgEl, 'Checking your verification result...', 'pending');
+      pollStripeStatus();
     }
   } catch (err) {
     console.error(err);
   }
 })();
 
-function showMsg(el, text, type) {
-  el.textContent = text;
-  el.className = 'inline-msg ' + type;
-  el.style.display = 'block';
-}
-
-function readFileAsDataUrl(file, callback) {
-  const reader = new FileReader();
-  reader.onload = () => callback(reader.result);
-  reader.readAsDataURL(file);
+async function pollStripeStatus(attempt) {
+  attempt = attempt || 0;
+  const msgEl = document.getElementById('identityMsg');
+  try {
+    const res = await fetch('/api/identity/check');
+    const data = await res.json();
+    if (data.status === 'verified') {
+      showMsg(msgEl, 'Identity verified! Taking you to the app...', 'success');
+      setTimeout(() => window.location.href = 'index.html', 1200);
+      return;
+    }
+    if (data.status === 'requires_input' || data.status === 'processing') {
+      if (attempt < 5) {
+        showMsg(msgEl, 'Still processing your verification...', 'pending');
+        setTimeout(() => pollStripeStatus(attempt + 1), 2500);
+      } else {
+        showMsg(msgEl, 'Still processing — check back in a minute, or try again.', 'pending');
+      }
+      return;
+    }
+    showMsg(msgEl, 'Verification was not completed. Please try again.', 'error');
+  } catch (err) {
+    showMsg(msgEl, 'Could not check verification status.', 'error');
+  }
 }
 
 // Email verification
@@ -60,69 +85,24 @@ document.getElementById('verifyEmailBtn').addEventListener('click', async () => 
       showMsg(msgEl, data.error || 'Incorrect code.', 'error');
       return;
     }
-    showMsg(msgEl, 'Email verified! Continue to identity document below.', 'success');
+    showMsg(msgEl, 'Email verified! Continue to identity verification below.', 'success');
+    document.getElementById('emailCard').style.opacity = '0.5';
   } catch (err) {
     showMsg(msgEl, 'Could not reach the server.', 'error');
   }
 });
 
-// ID document capture
-document.getElementById('idCameraBtn').addEventListener('click', () => document.getElementById('idCameraInput').click());
-document.getElementById('idGalleryBtn').addEventListener('click', () => document.getElementById('idGalleryInput').click());
-
-function handleIdFile(input) {
-  const file = input.files[0];
-  if (!file) return;
-  readFileAsDataUrl(file, (dataUrl) => {
-    idImageData = dataUrl;
-    const preview = document.getElementById('idPreview');
-    preview.src = dataUrl;
-    preview.style.display = 'block';
-  });
-}
-document.getElementById('idCameraInput').addEventListener('change', (e) => handleIdFile(e.target));
-document.getElementById('idGalleryInput').addEventListener('change', (e) => handleIdFile(e.target));
-
-// Selfie capture
-document.getElementById('selfieCameraBtn').addEventListener('click', () => document.getElementById('selfieCameraInput').click());
-document.getElementById('selfieCameraInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  readFileAsDataUrl(file, (dataUrl) => {
-    selfieImageData = dataUrl;
-    const preview = document.getElementById('selfiePreview');
-    preview.src = dataUrl;
-    preview.style.display = 'block';
-  });
-});
-
-// Final submission
-document.getElementById('submitIdentityBtn').addEventListener('click', async () => {
+// Start Stripe Identity flow
+document.getElementById('startStripeBtn').addEventListener('click', async () => {
   const msgEl = document.getElementById('identityMsg');
-  const docType = document.getElementById('docType').value;
-
-  if (!idImageData || !selfieImageData) {
-    showMsg(msgEl, 'Please provide both an ID document photo and a selfie.', 'error');
-    return;
-  }
-
   try {
-    const res = await fetch('/api/identity/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        documentType: docType,
-        idImage: idImageData,
-        selfieImage: selfieImageData
-      })
-    });
+    const res = await fetch('/api/identity/create-session', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) {
-      showMsg(msgEl, data.error || 'Submission failed.', 'error');
+      showMsg(msgEl, data.error || 'Could not start verification.', 'error');
       return;
     }
-    showMsg(msgEl, 'Verified! Taking you to the app...', 'success');
-    setTimeout(() => window.location.href = 'index.html', 1200);
+    window.location.href = data.url; // Stripe's hosted verification flow
   } catch (err) {
     showMsg(msgEl, 'Could not reach the server.', 'error');
   }

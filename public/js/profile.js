@@ -1,4 +1,4 @@
-// profile.js - loads account info and trade stats
+// profile.js - loads account info, stats, monthly trades, risk settings, discipline score
 
 requireLogin();
 
@@ -19,10 +19,105 @@ async function loadProfile() {
   document.getElementById('statFollowed').textContent = followedPct + '%';
   document.getElementById('statWins').textContent = wins;
   document.getElementById('statLosses').textContent = losses;
+
+  renderDiscipline(followedPct, total);
   applySavedAvatar();
 }
 
-loadProfile();
+// ---------- Discipline score gauge (1-100, colour coded) ----------
+function renderDiscipline(score, totalTrades) {
+  const fill = document.getElementById('disciplineFill');
+  const label = document.getElementById('disciplineLabel');
+  const desc = document.getElementById('disciplineDesc');
+
+  if (totalTrades === 0) {
+    fill.style.width = '0%';
+    label.textContent = 'No trades yet';
+    desc.textContent = 'Log some trades to see your discipline score.';
+    return;
+  }
+
+  let color, message;
+  if (score < 40) {
+    color = '#e0613f'; // red — low discipline
+    message = 'Low — you\'re straying from your plan often. Review what\'s pulling you off it.';
+  } else if (score < 70) {
+    color = '#f0c75e'; // gold/yellow — moderate
+    message = 'Moderate — you follow your plan sometimes. Aim for more consistency.';
+  } else {
+    color = '#3ddc97'; // green — strong discipline
+    message = 'Strong — you\'re sticking to your plan consistently. Keep it up.';
+  }
+
+  fill.style.width = score + '%';
+  fill.style.background = color;
+  label.textContent = score + ' / 100';
+  label.style.color = color;
+  desc.textContent = message;
+}
+
+// ---------- Trades per month ----------
+async function loadMonthly() {
+  try {
+    const res = await fetch('/api/journal/monthly');
+    const rows = await res.json();
+    const list = document.getElementById('monthlyList');
+    const empty = document.getElementById('monthlyEmpty');
+    list.innerHTML = '';
+
+    if (!rows.length) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    for (const r of rows) {
+      const [year, month] = r.month.split('-');
+      const monthName = new Date(year, month - 1).toLocaleString(undefined, { month: 'long', year: 'numeric' });
+      const row = document.createElement('div');
+      row.className = 'month-row';
+      row.innerHTML = `<span>${monthName}</span><span class="count">${r.count}</span>`;
+      list.appendChild(row);
+    }
+  } catch (err) {
+    console.error('Could not load monthly trades', err);
+  }
+}
+
+// ---------- Risk limits ----------
+async function loadRiskSettings() {
+  try {
+    const res = await fetch('/api/account/risk-settings');
+    const data = await res.json();
+    document.getElementById('dailyMaxLoss').value = data.daily_max_loss_pct || '';
+    document.getElementById('dailyMaxGain').value = data.daily_max_gain_pct || '';
+    document.getElementById('monthlyMaxGain').value = data.monthly_max_gain_pct || '';
+    document.getElementById('monthlyMaxLoss').value = data.monthly_max_loss_pct || '';
+  } catch (err) {
+    console.error('Could not load risk settings', err);
+  }
+}
+
+document.getElementById('saveRiskBtn').addEventListener('click', async () => {
+  const msgEl = document.getElementById('riskMsg');
+  try {
+    await fetch('/api/account/risk-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        daily_max_loss_pct: document.getElementById('dailyMaxLoss').value,
+        daily_max_gain_pct: document.getElementById('dailyMaxGain').value,
+        monthly_max_gain_pct: document.getElementById('monthlyMaxGain').value,
+        monthly_max_loss_pct: document.getElementById('monthlyMaxLoss').value
+      })
+    });
+    msgEl.textContent = 'Risk limits saved.';
+    msgEl.style.display = 'block';
+    setTimeout(() => msgEl.style.display = 'none', 1500);
+  } catch (err) {
+    console.error('Could not save risk settings', err);
+  }
+});
 
 // ---------- Avatar upload (stored on-device) ----------
 const avatarEl = document.getElementById('avatarInitial');
@@ -36,7 +131,6 @@ function applySavedAvatar() {
     avatarEl.textContent = '';
   }
 }
-applySavedAvatar();
 
 avatarAddBtn.addEventListener('click', () => avatarInput.click());
 
@@ -51,3 +145,7 @@ avatarInput.addEventListener('change', () => {
   };
   reader.readAsDataURL(file);
 });
+
+loadProfile();
+loadMonthly();
+loadRiskSettings();

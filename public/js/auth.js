@@ -54,14 +54,27 @@ function showUpdateBanner(registration) {
   `;
   banner.innerHTML = `
     <span>A new version of the app is available.</span>
-    <button id="updateNowBtn" style="background:#0a0a0a; color:#3ddc97; border:none; padding:8px 14px; border-radius:6px; font-weight:700; cursor:pointer;">Update</button>
+    <button id="updateNowBtn" style="background:#0a0a0a; color:#3ddc97; border:none; padding:8px 14px; border-radius:6px; font-weight:700; cursor:pointer;">Download & Update</button>
   `;
   document.body.appendChild(banner);
 
-  document.getElementById('updateNowBtn').addEventListener('click', () => {
+  document.getElementById('updateNowBtn').addEventListener('click', async () => {
+    banner.querySelector('span').textContent = 'Downloading the new version...';
+    document.getElementById('updateNowBtn').disabled = true;
+
+    // Clear the old cached files so nothing stale is reused
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    } catch (e) { /* ignore */ }
+
     if (registration.waiting) {
       registration.waiting.postMessage('skipWaiting');
     }
+    // Hard reload straight from the network, bypassing any cache
+    setTimeout(() => {
+      window.location.href = window.location.pathname + '?fresh=' + Date.now();
+    }, 400);
   });
 }
 
