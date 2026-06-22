@@ -1,4 +1,5 @@
-// plan.js - guards the page, loads the user's saved plan, and autosaves edits
+// plan.js - guards the page, loads the user's saved plan, autosaves edits,
+// and wires up explicit Submit buttons for clear save confirmation.
 
 requireLogin();
 
@@ -27,43 +28,66 @@ async function loadPlan() {
 }
 loadPlan();
 
-function showToast() {
+function showToast(msg) {
+  toast.textContent = msg || 'Saved';
   toast.style.display = 'block';
   setTimeout(() => toast.style.display = 'none', 1200);
 }
 
+function saveLocal(key, value, msg) {
+  localStorage.setItem(key, value);
+  showToast(msg);
+}
+
+async function savePlan(msg) {
+  try {
+    await fetch('/api/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chart_process: chartProcess.value,
+        entry_criteria: entryCriteria.value,
+        exit_criteria: exitCriteria.value
+      })
+    });
+    showToast(msg);
+  } catch (err) {
+    console.error('Could not save plan', err);
+    showToast('Error saving');
+  }
+}
+
+// Autosave (debounced) as a backup, still works while typing
 let localDebounce;
-function debounceLocalSave(key, value) {
+premarket.addEventListener('input', () => {
   clearTimeout(localDebounce);
-  localDebounce = setTimeout(() => {
-    localStorage.setItem(key, value);
-    showToast();
-  }, 600);
-}
-
+  localDebounce = setTimeout(() => saveLocal('premarketNotes', premarket.value), 800);
+});
+let localDebounce2;
+postmarket.addEventListener('input', () => {
+  clearTimeout(localDebounce2);
+  localDebounce2 = setTimeout(() => saveLocal('postmarketNotes', postmarket.value), 800);
+});
 let planDebounce;
-function debounceSavePlan() {
-  clearTimeout(planDebounce);
-  planDebounce = setTimeout(async () => {
-    try {
-      await fetch('/api/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chart_process: chartProcess.value,
-          entry_criteria: entryCriteria.value,
-          exit_criteria: exitCriteria.value
-        })
-      });
-      showToast();
-    } catch (err) {
-      console.error('Could not save plan', err);
-    }
-  }, 600);
-}
+[chartProcess, entryCriteria, exitCriteria].forEach(el => {
+  el.addEventListener('input', () => {
+    clearTimeout(planDebounce);
+    planDebounce = setTimeout(() => savePlan(), 800);
+  });
+});
 
-premarket.addEventListener('input', () => debounceLocalSave('premarketNotes', premarket.value));
-postmarket.addEventListener('input', () => debounceLocalSave('postmarketNotes', postmarket.value));
-chartProcess.addEventListener('input', debounceSavePlan);
-entryCriteria.addEventListener('input', debounceSavePlan);
-exitCriteria.addEventListener('input', debounceSavePlan);
+// Explicit Submit buttons
+document.getElementById('submitPremarket').addEventListener('click', () =>
+  saveLocal('premarketNotes', premarket.value, 'Premarket routine saved'));
+
+document.getElementById('submitPostmarket').addEventListener('click', () =>
+  saveLocal('postmarketNotes', postmarket.value, 'Post market routine saved'));
+
+document.getElementById('submitChartProcess').addEventListener('click', () =>
+  savePlan('Chart process saved'));
+
+document.getElementById('submitEntryCriteria').addEventListener('click', () =>
+  savePlan('Entry criteria saved'));
+
+document.getElementById('submitExitCriteria').addEventListener('click', () =>
+  savePlan('Exit criteria saved'));

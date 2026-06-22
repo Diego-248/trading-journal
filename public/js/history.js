@@ -37,13 +37,13 @@ async function loadEntries() {
       <div class="meta">Emotion: ${e.emotion_entry || '—'} → ${e.emotion_after || '—'}</div>
 
       <div class="entry-section">
-        <div class="label">What I learned from this trade</div>
-        <div class="value">${e.lesson ? escapeHtml(e.lesson) : '<em style="color:var(--muted)">Nothing written</em>'}</div>
+        <div class="label">Why I entered the trade</div>
+        <div class="value">${e.notes ? escapeHtml(e.notes) : '<em style="color:var(--muted)">Nothing written</em>'}</div>
       </div>
 
       <div class="entry-section">
-        <div class="label">Additional notes</div>
-        <div class="value">${e.notes ? escapeHtml(e.notes) : '<em style="color:var(--muted)">Nothing written</em>'}</div>
+        <div class="label">What I learned from this trade</div>
+        <div class="value">${e.lesson ? escapeHtml(e.lesson) : '<em style="color:var(--muted)">Nothing written</em>'}</div>
       </div>
     `;
     wrap.appendChild(card);
