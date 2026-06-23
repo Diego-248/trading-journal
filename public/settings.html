@@ -38,11 +38,13 @@
       <h2>Account Information</h2>
       <div class="settings-item">
         <div class="label">Username</div>
-        <div class="desc" id="infoUsername">—</div>
-      </div>
-      <div class="settings-item">
-        <div class="label">App version</div>
-        <div class="desc" id="appVersion">—</div>
+        <div class="desc" id="infoUsername" style="margin-bottom:10px;">—</div>
+        <div id="usernameEditWrap" style="display:none;">
+          <input type="text" id="usernameInput" placeholder="Username">
+          <button class="btn-primary" id="saveUsernameBtn">Save Username</button>
+        </div>
+        <button class="btn-secondary" id="updateUsernameBtn">Update Username</button>
+        <p class="inline-msg" id="usernameMsg"></p>
       </div>
     </div>
 
@@ -92,6 +94,8 @@
     <div class="card">
       <button id="logoutBtn" class="btn-primary" style="background:var(--danger); color:#fff;">Log Out</button>
     </div>
+
+    <p style="text-align:center; color:var(--muted); font-size:0.7rem; margin-top:10px;" id="appVersion">—</p>
   </div>
 
   <script src="js/auth.js"></script>
