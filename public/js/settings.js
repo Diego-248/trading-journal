@@ -22,6 +22,7 @@ async function loadAccount() {
     const res = await fetch('/api/account');
     const data = await res.json();
     document.getElementById('infoUsername').textContent = data.username || '—';
+    document.getElementById('usernameInput').value = data.username || '';
 
     // ---- Email section ----
     const emailEl = document.getElementById('infoEmail');
@@ -157,6 +158,34 @@ document.getElementById('changePasswordBtn').addEventListener('click', async () 
     showMsg(msgEl, 'Password changed successfully.', 'success');
     document.getElementById('currentPassword').value = '';
     document.getElementById('newPassword').value = '';
+  } catch (err) {
+    showMsg(msgEl, 'Could not reach the server.', 'error');
+  }
+});
+
+document.getElementById('updateUsernameBtn').addEventListener('click', () => {
+  document.getElementById('usernameEditWrap').style.display = 'block';
+  document.getElementById('updateUsernameBtn').style.display = 'none';
+});
+
+document.getElementById('saveUsernameBtn').addEventListener('click', async () => {
+  const username = document.getElementById('usernameInput').value.trim();
+  const msgEl = document.getElementById('usernameMsg');
+  try {
+    const res = await fetch('/api/account/username', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMsg(msgEl, data.error || 'Could not update username.', 'error');
+      return;
+    }
+    showMsg(msgEl, 'Username updated.', 'success');
+    document.getElementById('usernameEditWrap').style.display = 'none';
+    document.getElementById('updateUsernameBtn').style.display = 'block';
+    loadAccount();
   } catch (err) {
     showMsg(msgEl, 'Could not reach the server.', 'error');
   }

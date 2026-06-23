@@ -26,7 +26,6 @@ async function loadPlan() {
     console.error('Could not load plan', err);
   }
 }
-loadPlan();
 
 function showToast(msg) {
   toast.textContent = msg || 'Saved';
@@ -76,18 +75,42 @@ let planDebounce;
   });
 });
 
+function hideButton(id) {
+  const btn = document.getElementById(id);
+  if (btn) btn.style.display = 'none';
+}
+
 // Explicit Submit buttons
-document.getElementById('submitPremarket').addEventListener('click', () =>
-  saveLocal('premarketNotes', premarket.value, 'Premarket routine saved'));
+document.getElementById('submitPremarket').addEventListener('click', () => {
+  saveLocal('premarketNotes', premarket.value, 'Premarket routine saved');
+  hideButton('submitPremarket');
+});
 
-document.getElementById('submitPostmarket').addEventListener('click', () =>
-  saveLocal('postmarketNotes', postmarket.value, 'Post market routine saved'));
+document.getElementById('submitPostmarket').addEventListener('click', () => {
+  saveLocal('postmarketNotes', postmarket.value, 'Post market routine saved');
+  hideButton('submitPostmarket');
+});
 
-document.getElementById('submitChartProcess').addEventListener('click', () =>
-  savePlan('Chart process saved'));
+document.getElementById('submitChartProcess').addEventListener('click', () => {
+  savePlan('Chart process saved');
+  hideButton('submitChartProcess');
+});
 
-document.getElementById('submitEntryCriteria').addEventListener('click', () =>
-  savePlan('Entry criteria saved'));
+document.getElementById('submitEntryCriteria').addEventListener('click', () => {
+  savePlan('Entry criteria saved');
+  hideButton('submitEntryCriteria');
+});
 
-document.getElementById('submitExitCriteria').addEventListener('click', () =>
-  savePlan('Exit criteria saved'));
+document.getElementById('submitExitCriteria').addEventListener('click', () => {
+  savePlan('Exit criteria saved');
+  hideButton('submitExitCriteria');
+});
+
+// On load: if a section already has saved content, hide its submit button too
+if (premarket.value.trim()) hideButton('submitPremarket');
+if (postmarket.value.trim()) hideButton('submitPostmarket');
+loadPlan().then(() => {
+  if (chartProcess.value.trim()) hideButton('submitChartProcess');
+  if (entryCriteria.value.trim()) hideButton('submitEntryCriteria');
+  if (exitCriteria.value.trim()) hideButton('submitExitCriteria');
+});

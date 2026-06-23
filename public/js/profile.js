@@ -26,26 +26,26 @@ async function loadProfile() {
 
 // ---------- Discipline score gauge (1-100, colour coded) ----------
 function renderDiscipline(score, totalTrades) {
+  const card = document.getElementById('disciplineCard');
   const fill = document.getElementById('disciplineFill');
   const label = document.getElementById('disciplineLabel');
   const desc = document.getElementById('disciplineDesc');
 
   if (totalTrades === 0) {
-    fill.style.width = '0%';
-    label.textContent = 'No trades yet';
-    desc.textContent = 'Log some trades to see your discipline score.';
+    card.style.display = 'none';
     return;
   }
+  card.style.display = 'block';
 
   let color, message;
   if (score < 40) {
-    color = '#e0613f'; // red — low discipline
+    color = '#e0613f';
     message = 'Low — you\'re straying from your plan often. Review what\'s pulling you off it.';
   } else if (score < 70) {
-    color = '#f0c75e'; // gold/yellow — moderate
+    color = '#f0c75e';
     message = 'Moderate — you follow your plan sometimes. Aim for more consistency.';
   } else {
-    color = '#3ddc97'; // green — strong discipline
+    color = '#3ddc97';
     message = 'Strong — you\'re sticking to your plan consistently. Keep it up.';
   }
 
@@ -93,6 +93,11 @@ async function loadRiskSettings() {
     document.getElementById('dailyMaxGain').value = data.daily_max_gain_pct || '';
     document.getElementById('monthlyMaxGain').value = data.monthly_max_gain_pct || '';
     document.getElementById('monthlyMaxLoss').value = data.monthly_max_loss_pct || '';
+
+    const anyFilled = data.daily_max_loss_pct || data.daily_max_gain_pct || data.monthly_max_gain_pct || data.monthly_max_loss_pct;
+    if (anyFilled) {
+      document.getElementById('saveRiskBtn').style.display = 'none';
+    }
   } catch (err) {
     console.error('Could not load risk settings', err);
   }
@@ -114,6 +119,7 @@ document.getElementById('saveRiskBtn').addEventListener('click', async () => {
     msgEl.textContent = 'Risk limits saved.';
     msgEl.style.display = 'block';
     setTimeout(() => msgEl.style.display = 'none', 1500);
+    document.getElementById('saveRiskBtn').style.display = 'none';
   } catch (err) {
     console.error('Could not save risk settings', err);
   }
