@@ -1,6 +1,6 @@
 {
   "name": "trading-journal",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Trading Plan & Journal web app with login and database-backed journal storage",
   "main": "server.js",
   "scripts": {

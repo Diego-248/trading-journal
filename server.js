@@ -257,6 +257,29 @@ app.get('/api/account', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/account/username', requireAuth, async (req, res) => {
+  const { username } = req.body;
+  if (!username || !username.trim()) {
+    return res.status(400).json({ error: 'Username cannot be empty.' });
+  }
+  const cleanUsername = username.trim();
+  try {
+    const existing = await pool.query(
+      'SELECT id FROM users WHERE username = $1 AND id != $2',
+      [cleanUsername, req.session.userId]
+    );
+    if (existing.rows.length) {
+      return res.status(409).json({ error: 'That username is already taken.' });
+    }
+    await pool.query('UPDATE users SET username = $1 WHERE id = $2', [cleanUsername, req.session.userId]);
+    req.session.username = cleanUsername;
+    res.json({ success: true, username: cleanUsername });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error updating username.' });
+  }
+});
+
 app.post('/api/account/dob', requireAuth, async (req, res) => {
   const { date_of_birth } = req.body;
   try {
