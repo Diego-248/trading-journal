@@ -14,8 +14,10 @@
     <div class="brand">Trading<span>Plan</span> &amp; Journal</div>
     <div class="nav-links">
       <a href="index.html" class="active">Plan</a>
-      <a href="journal.html">Journal</a>
-      <a href="history.html">History</a>
+      <a href="edge.html">Edge</a>
+      <a href="journal.html">Trade Results</a>
+      <a href="sanctuary.html">Sanctuary</a>
+      <a href="history.html">Journals</a>
       <a href="profile.html">Profile</a>
       <a href="settings.html">Settings</a>
     </div>
@@ -33,6 +35,8 @@
       <label for="premarket">Notes (news, levels, bias)</label>
       <textarea id="premarket" rows="4" placeholder="Write your premarket checks here..."></textarea>
       <button type="button" class="btn-secondary" id="submitPremarket" style="margin-top:12px;">Submit</button>
+      <p class="plan-text-display" id="premarketDisplay" style="display:none;"></p>
+      <button type="button" class="btn-secondary" id="editPremarket" style="display:none;">Edit</button>
     </div>
 
     <div class="card">
@@ -40,6 +44,8 @@
       <label for="chart_process">Write your own chart process — the steps you follow to read the chart</label>
       <textarea id="chart_process" rows="8" placeholder="e.g. 1. Mark the higher timeframe trend...&#10;2. Identify the swing range...&#10;3. ..."></textarea>
       <button type="button" class="btn-secondary" id="submitChartProcess" style="margin-top:12px;">Submit</button>
+      <p class="plan-text-display" id="chartProcessDisplay" style="display:none;"></p>
+      <button type="button" class="btn-secondary" id="editChartProcess" style="display:none;">Edit</button>
     </div>
 
     <div class="card">
@@ -47,6 +53,8 @@
       <label for="entry_criteria">Write your own entry criteria — what must be true before you enter a trade</label>
       <textarea id="entry_criteria" rows="8" placeholder="e.g. 1. Wait for price to mitigate the HTF/MTF POI...&#10;2. Look for a liquidity sweep...&#10;3. ..."></textarea>
       <button type="button" class="btn-secondary" id="submitEntryCriteria" style="margin-top:12px;">Submit</button>
+      <p class="plan-text-display" id="entryCriteriaDisplay" style="display:none;"></p>
+      <button type="button" class="btn-secondary" id="editEntryCriteria" style="display:none;">Edit</button>
     </div>
 
     <div class="card">
@@ -54,6 +62,8 @@
       <label for="exit_criteria">Write your own exit criteria — how you set stop loss and take profit</label>
       <textarea id="exit_criteria" rows="6" placeholder="e.g. Stop loss: below/above entry candle...&#10;Take profit: at the opposing supply/demand zone..."></textarea>
       <button type="button" class="btn-secondary" id="submitExitCriteria" style="margin-top:12px;">Submit</button>
+      <p class="plan-text-display" id="exitCriteriaDisplay" style="display:none;"></p>
+      <button type="button" class="btn-secondary" id="editExitCriteria" style="display:none;">Edit</button>
     </div>
 
     <div class="card">
@@ -61,6 +71,8 @@
       <label for="postmarket">Review your day — what went well, what to improve</label>
       <textarea id="postmarket" rows="4" placeholder="Write your post-market review here..."></textarea>
       <button type="button" class="btn-secondary" id="submitPostmarket" style="margin-top:12px;">Submit</button>
+      <p class="plan-text-display" id="postmarketDisplay" style="display:none;"></p>
+      <button type="button" class="btn-secondary" id="editPostmarket" style="display:none;">Edit</button>
     </div>
 
     <div class="card">
