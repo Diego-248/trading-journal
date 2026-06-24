@@ -117,9 +117,11 @@ async function initDb() {
       chart_process TEXT DEFAULT '',
       entry_criteria TEXT DEFAULT '',
       exit_criteria TEXT DEFAULT '',
+      guiderules TEXT DEFAULT '',
       updated_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await pool.query(`ALTER TABLE user_plans ADD COLUMN IF NOT EXISTS guiderules TEXT DEFAULT '';`);
 }
 
 // ---------- Middleware ----------
@@ -447,7 +449,7 @@ app.get('/api/profile', requireAuth, async (req, res) => {
 app.get('/api/plan', requireAuth, requireVerified, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM user_plans WHERE user_id = $1', [req.session.userId]);
-    res.json(result.rows[0] || { chart_process: '', entry_criteria: '', exit_criteria: '' });
+    res.json(result.rows[0] || { chart_process: '', entry_criteria: '', exit_criteria: '', guiderules: '' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error loading plan.' });
@@ -455,14 +457,14 @@ app.get('/api/plan', requireAuth, requireVerified, async (req, res) => {
 });
 
 app.post('/api/plan', requireAuth, requireVerified, async (req, res) => {
-  const { chart_process, entry_criteria, exit_criteria } = req.body;
+  const { chart_process, entry_criteria, exit_criteria, guiderules } = req.body;
   try {
     await pool.query(`
-      INSERT INTO user_plans (user_id, chart_process, entry_criteria, exit_criteria)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO user_plans (user_id, chart_process, entry_criteria, exit_criteria, guiderules)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (user_id)
-      DO UPDATE SET chart_process = $2, entry_criteria = $3, exit_criteria = $4, updated_at = NOW()
-    `, [req.session.userId, chart_process || '', entry_criteria || '', exit_criteria || '']);
+      DO UPDATE SET chart_process = $2, entry_criteria = $3, exit_criteria = $4, guiderules = $5, updated_at = NOW()
+    `, [req.session.userId, chart_process || '', entry_criteria || '', exit_criteria || '', guiderules || '']);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
