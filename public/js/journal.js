@@ -1,4 +1,4 @@
-// journal.js - handles journal form submission and history rendering via the API
+// journal.js - handles journal form submission, chart image uploads, and history rendering
 
 requireLogin();
 
@@ -9,6 +9,46 @@ function showToast(msg) {
   setTimeout(() => toast.style.display = 'none', 1500);
 }
 
+// ---------- Chart screenshot upload boxes ----------
+let htfImageData = '';
+let mtfImageData = '';
+let ltfImageData = '';
+
+function wireUploadBox(boxId, inputId, previewId, setter) {
+  const box = document.getElementById(boxId);
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+
+  box.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setter(reader.result);
+      preview.src = reader.result;
+      preview.style.display = 'block';
+      box.querySelector('.upload-placeholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+wireUploadBox('htfBox', 'htfInput', 'htfPreview', (v) => htfImageData = v);
+wireUploadBox('mtfBox', 'mtfInput', 'mtfPreview', (v) => mtfImageData = v);
+wireUploadBox('ltfBox', 'ltfInput', 'ltfPreview', (v) => ltfImageData = v);
+
+function resetUploadBoxes() {
+  htfImageData = '';
+  mtfImageData = '';
+  ltfImageData = '';
+  ['htf', 'mtf', 'ltf'].forEach(prefix => {
+    document.getElementById(prefix + 'Preview').style.display = 'none';
+    document.getElementById(prefix + 'Box').querySelector('.upload-placeholder').style.display = 'inline';
+  });
+}
+
+// ---------- History table ----------
 async function loadHistory() {
   const res = await fetch('/api/journal');
   const entries = await res.json();
@@ -63,7 +103,10 @@ document.getElementById('journalForm').addEventListener('submit', async (e) => {
     emotion_entry: document.getElementById('emotion_entry').value,
     emotion_after: document.getElementById('emotion_after').value,
     lesson: document.getElementById('lesson').value,
-    notes: document.getElementById('notes').value
+    notes: document.getElementById('notes').value,
+    htf_image: htfImageData,
+    mtf_image: mtfImageData,
+    ltf_image: ltfImageData
   };
 
   const res = await fetch('/api/journal', {
@@ -75,6 +118,7 @@ document.getElementById('journalForm').addEventListener('submit', async (e) => {
   if (res.ok) {
     showToast('Trade saved');
     e.target.reset();
+    resetUploadBoxes();
     loadHistory();
   } else {
     showToast('Error saving trade');
