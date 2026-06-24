@@ -82,6 +82,38 @@
       </div>
 
       <div class="card">
+        <h2>Chart Screenshots</h2>
+        <p style="color:var(--muted); font-size:0.85rem;">Upload a screenshot of your chart at each timeframe.</p>
+
+        <div class="grid-3">
+          <div>
+            <label>HTF Chart</label>
+            <div class="chart-upload-box" id="htfBox">
+              <span class="upload-placeholder">+ Add photo</span>
+              <img id="htfPreview" style="display:none;">
+            </div>
+            <input type="file" id="htfInput" accept="image/*" style="display:none;">
+          </div>
+          <div>
+            <label>MTF Chart</label>
+            <div class="chart-upload-box" id="mtfBox">
+              <span class="upload-placeholder">+ Add photo</span>
+              <img id="mtfPreview" style="display:none;">
+            </div>
+            <input type="file" id="mtfInput" accept="image/*" style="display:none;">
+          </div>
+          <div>
+            <label>LTF Chart</label>
+            <div class="chart-upload-box" id="ltfBox">
+              <span class="upload-placeholder">+ Add photo</span>
+              <img id="ltfPreview" style="display:none;">
+            </div>
+            <input type="file" id="ltfInput" accept="image/*" style="display:none;">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>Trade Emotion Check</h2>
         <label>Emotion when I ENTERED the trade</label>
         <select id="emotion_entry">
