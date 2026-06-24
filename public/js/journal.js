@@ -48,45 +48,6 @@ function resetUploadBoxes() {
   });
 }
 
-// ---------- History table ----------
-async function loadHistory() {
-  const res = await fetch('/api/journal');
-  const entries = await res.json();
-  const body = document.getElementById('historyBody');
-  const emptyState = document.getElementById('emptyState');
-  body.innerHTML = '';
-
-  if (!entries.length) {
-    emptyState.style.display = 'block';
-    return;
-  }
-  emptyState.style.display = 'none';
-
-  for (const e of entries) {
-    const tr = document.createElement('tr');
-    const followedBadge = e.followed_plan === 'Yes'
-      ? '<span class="badge yes">Yes</span>'
-      : '<span class="badge no">No</span>';
-    tr.innerHTML = `
-      <td>${e.trade_date}</td>
-      <td>${e.symbol}</td>
-      <td>${e.result}</td>
-      <td>${e.r_value}</td>
-      <td>${followedBadge}</td>
-      <td>${e.emotion_entry} → ${e.emotion_after}</td>
-      <td><button class="btn-danger" data-id="${e.id}">Delete</button></td>
-    `;
-    body.appendChild(tr);
-  }
-
-  body.querySelectorAll('.btn-danger').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      await fetch('/api/journal/' + btn.dataset.id, { method: 'DELETE' });
-      loadHistory();
-    });
-  });
-}
-
 document.getElementById('journalForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -119,10 +80,8 @@ document.getElementById('journalForm').addEventListener('submit', async (e) => {
     showToast('Trade saved');
     e.target.reset();
     resetUploadBoxes();
-    loadHistory();
   } else {
     showToast('Error saving trade');
   }
 });
 
-loadHistory();

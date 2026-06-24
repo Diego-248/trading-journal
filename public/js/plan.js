@@ -1,116 +1,111 @@
-// plan.js - guards the page, loads the user's saved plan, autosaves edits,
-// and wires up explicit Submit buttons for clear save confirmation.
+// plan.js - guards the page, loads the user's saved plan, and toggles each
+// section between an editable textarea and a clean readable text display.
 
 requireLogin();
 
-const premarket = document.getElementById('premarket');
-const postmarket = document.getElementById('postmarket');
-const chartProcess = document.getElementById('chart_process');
-const entryCriteria = document.getElementById('entry_criteria');
-const exitCriteria = document.getElementById('exit_criteria');
 const toast = document.getElementById('toast');
-
-// Premarket/postmarket notes stay local to the device
-premarket.value = localStorage.getItem('premarketNotes') || '';
-postmarket.value = localStorage.getItem('postmarketNotes') || '';
-
-// Chart process / entry / exit criteria are personal to the account, stored in the database
-async function loadPlan() {
-  try {
-    const res = await fetch('/api/plan');
-    const data = await res.json();
-    chartProcess.value = data.chart_process || '';
-    entryCriteria.value = data.entry_criteria || '';
-    exitCriteria.value = data.exit_criteria || '';
-  } catch (err) {
-    console.error('Could not load plan', err);
-  }
-}
-
 function showToast(msg) {
   toast.textContent = msg || 'Saved';
   toast.style.display = 'block';
   setTimeout(() => toast.style.display = 'none', 1200);
 }
 
-function saveLocal(key, value, msg) {
-  localStorage.setItem(key, value);
-  showToast(msg);
-}
+// Generic toggle controller for one plan section
+function setupSection(textareaId, submitId, displayId, editId, getValue, onSave) {
+  const textarea = document.getElementById(textareaId);
+  const submitBtn = document.getElementById(submitId);
+  const display = document.getElementById(displayId);
+  const editBtn = document.getElementById(editId);
 
-async function savePlan(msg) {
-  try {
-    await fetch('/api/plan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chart_process: chartProcess.value,
-        entry_criteria: entryCriteria.value,
-        exit_criteria: exitCriteria.value
-      })
-    });
-    showToast(msg);
-  } catch (err) {
-    console.error('Could not save plan', err);
-    showToast('Error saving');
+  function showSaved(text) {
+    textarea.style.display = 'none';
+    submitBtn.style.display = 'none';
+    display.textContent = text;
+    display.style.display = 'block';
+    editBtn.style.display = 'inline-block';
   }
-}
 
-// Autosave (debounced) as a backup, still works while typing
-let localDebounce;
-premarket.addEventListener('input', () => {
-  clearTimeout(localDebounce);
-  localDebounce = setTimeout(() => saveLocal('premarketNotes', premarket.value), 800);
-});
-let localDebounce2;
-postmarket.addEventListener('input', () => {
-  clearTimeout(localDebounce2);
-  localDebounce2 = setTimeout(() => saveLocal('postmarketNotes', postmarket.value), 800);
-});
-let planDebounce;
-[chartProcess, entryCriteria, exitCriteria].forEach(el => {
-  el.addEventListener('input', () => {
-    clearTimeout(planDebounce);
-    planDebounce = setTimeout(() => savePlan(), 800);
+  function showEditing() {
+    textarea.style.display = 'block';
+    submitBtn.style.display = 'inline-block';
+    display.style.display = 'none';
+    editBtn.style.display = 'none';
+  }
+
+  submitBtn.addEventListener('click', async () => {
+    const value = textarea.value.trim();
+    if (!value) return;
+    await onSave();
+    showSaved(value);
   });
-});
 
-function hideButton(id) {
-  const btn = document.getElementById(id);
-  if (btn) btn.style.display = 'none';
+  editBtn.addEventListener('click', () => showEditing());
+
+  return { showSaved, showEditing };
 }
 
-// Explicit Submit buttons
-document.getElementById('submitPremarket').addEventListener('click', () => {
-  saveLocal('premarketNotes', premarket.value, 'Premarket routine saved');
-  hideButton('submitPremarket');
-});
+// ---------- Premarket / Postmarket (stored locally on this device) ----------
+const premarket = document.getElementById('premarket');
+const postmarket = document.getElementById('postmarket');
 
-document.getElementById('submitPostmarket').addEventListener('click', () => {
-  saveLocal('postmarketNotes', postmarket.value, 'Post market routine saved');
-  hideButton('submitPostmarket');
-});
+const premarketCtrl = setupSection('premarket', 'submitPremarket', 'premarketDisplay', 'editPremarket',
+  () => premarket.value,
+  async () => { localStorage.setItem('premarketNotes', premarket.value); showToast('Premarket routine saved'); }
+);
+const postmarketCtrl = setupSection('postmarket', 'submitPostmarket', 'postmarketDisplay', 'editPostmarket',
+  () => postmarket.value,
+  async () => { localStorage.setItem('postmarketNotes', postmarket.value); showToast('Post market routine saved'); }
+);
 
-document.getElementById('submitChartProcess').addEventListener('click', () => {
-  savePlan('Chart process saved');
-  hideButton('submitChartProcess');
-});
+const savedPremarket = localStorage.getItem('premarketNotes') || '';
+const savedPostmarket = localStorage.getItem('postmarketNotes') || '';
+premarket.value = savedPremarket;
+postmarket.value = savedPostmarket;
+if (savedPremarket.trim()) premarketCtrl.showSaved(savedPremarket);
+if (savedPostmarket.trim()) postmarketCtrl.showSaved(savedPostmarket);
 
-document.getElementById('submitEntryCriteria').addEventListener('click', () => {
-  savePlan('Entry criteria saved');
-  hideButton('submitEntryCriteria');
-});
+// ---------- Chart process / Entry criteria / Exit criteria (stored in DB) ----------
+const chartProcess = document.getElementById('chart_process');
+const entryCriteria = document.getElementById('entry_criteria');
+const exitCriteria = document.getElementById('exit_criteria');
 
-document.getElementById('submitExitCriteria').addEventListener('click', () => {
-  savePlan('Exit criteria saved');
-  hideButton('submitExitCriteria');
-});
+async function savePlanField() {
+  await fetch('/api/plan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chart_process: chartProcess.value,
+      entry_criteria: entryCriteria.value,
+      exit_criteria: exitCriteria.value
+    })
+  });
+}
 
-// On load: if a section already has saved content, hide its submit button too
-if (premarket.value.trim()) hideButton('submitPremarket');
-if (postmarket.value.trim()) hideButton('submitPostmarket');
-loadPlan().then(() => {
-  if (chartProcess.value.trim()) hideButton('submitChartProcess');
-  if (entryCriteria.value.trim()) hideButton('submitEntryCriteria');
-  if (exitCriteria.value.trim()) hideButton('submitExitCriteria');
-});
+const chartProcessCtrl = setupSection('chart_process', 'submitChartProcess', 'chartProcessDisplay', 'editChartProcess',
+  () => chartProcess.value,
+  async () => { await savePlanField(); showToast('Chart process saved'); }
+);
+const entryCriteriaCtrl = setupSection('entry_criteria', 'submitEntryCriteria', 'entryCriteriaDisplay', 'editEntryCriteria',
+  () => entryCriteria.value,
+  async () => { await savePlanField(); showToast('Entry criteria saved'); }
+);
+const exitCriteriaCtrl = setupSection('exit_criteria', 'submitExitCriteria', 'exitCriteriaDisplay', 'editExitCriteria',
+  () => exitCriteria.value,
+  async () => { await savePlanField(); showToast('Exit criteria saved'); }
+);
+
+(async function loadPlan() {
+  try {
+    const res = await fetch('/api/plan');
+    const data = await res.json();
+    chartProcess.value = data.chart_process || '';
+    entryCriteria.value = data.entry_criteria || '';
+    exitCriteria.value = data.exit_criteria || '';
+
+    if (chartProcess.value.trim()) chartProcessCtrl.showSaved(chartProcess.value);
+    if (entryCriteria.value.trim()) entryCriteriaCtrl.showSaved(entryCriteria.value);
+    if (exitCriteria.value.trim()) exitCriteriaCtrl.showSaved(exitCriteria.value);
+  } catch (err) {
+    console.error('Could not load plan', err);
+  }
+})();

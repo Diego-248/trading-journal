@@ -96,12 +96,21 @@ async function loadRiskSettings() {
 
     const anyFilled = data.daily_max_loss_pct || data.daily_max_gain_pct || data.monthly_max_gain_pct || data.monthly_max_loss_pct;
     if (anyFilled) {
-      document.getElementById('saveRiskBtn').style.display = 'none';
+      setRiskEditing(false);
     }
   } catch (err) {
     console.error('Could not load risk settings', err);
   }
 }
+
+function setRiskEditing(editing) {
+  const inputs = ['dailyMaxLoss', 'dailyMaxGain', 'monthlyMaxGain', 'monthlyMaxLoss'];
+  inputs.forEach(id => document.getElementById(id).disabled = !editing);
+  document.getElementById('saveRiskBtn').style.display = editing ? 'inline-block' : 'none';
+  document.getElementById('editRiskBtn').style.display = editing ? 'none' : 'inline-block';
+}
+
+document.getElementById('editRiskBtn').addEventListener('click', () => setRiskEditing(true));
 
 document.getElementById('saveRiskBtn').addEventListener('click', async () => {
   const msgEl = document.getElementById('riskMsg');
@@ -119,7 +128,7 @@ document.getElementById('saveRiskBtn').addEventListener('click', async () => {
     msgEl.textContent = 'Risk limits saved.';
     msgEl.style.display = 'block';
     setTimeout(() => msgEl.style.display = 'none', 1500);
-    document.getElementById('saveRiskBtn').style.display = 'none';
+    setRiskEditing(false);
   } catch (err) {
     console.error('Could not save risk settings', err);
   }
