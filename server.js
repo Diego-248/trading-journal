@@ -101,9 +101,15 @@ async function initDb() {
       emotion_after TEXT,
       lesson TEXT,
       notes TEXT,
+      htf_image TEXT,
+      mtf_image TEXT,
+      ltf_image TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await pool.query(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS htf_image TEXT;`);
+  await pool.query(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS mtf_image TEXT;`);
+  await pool.query(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS ltf_image TEXT;`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_plans (
@@ -117,8 +123,8 @@ async function initDb() {
 }
 
 // ---------- Middleware ----------
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use((req, res, next) => {
   if (req.url === '/service-worker.js') {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -482,21 +488,22 @@ app.post('/api/journal', requireAuth, requireVerified, async (req, res) => {
   const {
     trade_date, symbol, entry_price, stop_loss, take_profit,
     result, r_value, followed_plan, emotion_entry, emotion_after,
-    lesson, notes
+    lesson, notes, htf_image, mtf_image, ltf_image
   } = req.body;
 
   try {
     const insertResult = await pool.query(`
       INSERT INTO journal_entries
         (user_id, trade_date, symbol, entry_price, stop_loss, take_profit,
-         result, r_value, followed_plan, emotion_entry, emotion_after, lesson, notes)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+         result, r_value, followed_plan, emotion_entry, emotion_after, lesson, notes,
+         htf_image, mtf_image, ltf_image)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
       RETURNING id
     `, [
       req.session.userId, trade_date || '', symbol || '', entry_price || '',
       stop_loss || '', take_profit || '', result || '', r_value || '',
       followed_plan || '', emotion_entry || '', emotion_after || '',
-      lesson || '', notes || ''
+      lesson || '', notes || '', htf_image || '', mtf_image || '', ltf_image || ''
     ]);
     res.json({ success: true, id: insertResult.rows[0].id });
   } catch (err) {
