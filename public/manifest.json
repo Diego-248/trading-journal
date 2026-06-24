@@ -1,6 +1,6 @@
 {
-  "name": "Trading Plan & Journal",
-  "short_name": "TradeJournal",
+  "name": "My Trading Plan and Journal",
+  "short_name": "My Trading Journal",
   "description": "Your trading plan, checklist, and trade journal — installable app",
   "start_url": "login.html",
   "display": "standalone",

@@ -1,6 +1,6 @@
 // service-worker.js - enables offline access and the "Install App" capability
 
-const CACHE_NAME = 'trade-journal-cache-v11';
+const CACHE_NAME = 'trade-journal-cache-v12';
 const ASSETS = [
   'login.html',
   'register.html',
@@ -12,6 +12,7 @@ const ASSETS = [
   'settings.html',
   'edge.html',
   'sanctuary.html',
+  'mentor.html',
   'css/style.css',
   'js/auth.js',
   'js/plan.js',
@@ -20,6 +21,7 @@ const ASSETS = [
   'js/profile.js',
   'js/settings.js',
   'js/verify.js',
+  'js/edge.js',
   'manifest.json',
   'icon-192.png',
   'icon-512.png'

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Edge — Trading Plan & Journal</title>
+<title>Edge — My Trading Plan and Journal</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#14110b">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -11,12 +11,13 @@
 </head>
 <body>
   <nav class="navbar">
-    <div class="brand">Trading<span>Plan</span> &amp; Journal</div>
+    <div class="brand">My Trading<span>Plan and Journal</span></div>
     <div class="nav-links">
       <a href="index.html">Plan</a>
       <a href="edge.html" class="active">Edge</a>
       <a href="journal.html">Trade Results</a>
       <a href="sanctuary.html">Sanctuary</a>
+      <a href="mentor.html">Mentor AI</a>
       <a href="history.html">Journals</a>
       <a href="profile.html">Profile</a>
       <a href="settings.html">Settings</a>
@@ -24,13 +25,31 @@
   </nav>
 
   <div class="container">
-    <div class="card" style="text-align:center; padding-top:60px; padding-bottom:60px;">
-      <h2 style="justify-content:center; font-size:1.5rem;">Edge</h2>
-      <p style="color:var(--muted);">New features coming soon.</p>
+
+    <div class="card">
+      <h2>What Is an Edge?</h2>
+      <p style="color:var(--muted); line-height:1.6;">
+        Far from being a magical, holy-grail strategy that never loses, an edge is simply a
+        statistical advantage built on two primary metrics — Win Rate and Risk-to-Reward (R:R)
+        Ratio — which interact to create a positive expectancy and profitable trading strategy
+        on a long run over a large sample of trades.
+      </p>
     </div>
+
+    <div class="card">
+      <h2>Create Your Guiderules</h2>
+      <label for="guiderules">Write down the rules that define your personal trading edge</label>
+      <textarea id="guiderules" rows="8" placeholder="e.g. I only take trades where my R:R is at least 1:2...&#10;I only trade my top 3 setups...&#10;..."></textarea>
+      <button type="button" class="btn-secondary" id="submitGuiderules" style="margin-top:12px;">Submit</button>
+      <p class="plan-text-display" id="guiderulesDisplay" style="display:none;"></p>
+      <button type="button" class="btn-secondary" id="editGuiderules" style="display:none;">Edit</button>
+    </div>
+
   </div>
 
+  <div class="toast" id="toast">Saved</div>
+
   <script src="js/auth.js"></script>
-  <script>requireLogin();</script>
+  <script src="js/edge.js"></script>
 </body>
 </html>
