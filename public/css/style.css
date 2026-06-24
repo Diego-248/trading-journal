@@ -308,3 +308,11 @@ th { color: var(--muted); font-weight: 600; }
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* Plan section read-only display (replaces the textarea box after submitting) */
+.plan-text-display {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: var(--text);
+  margin-top: 10px;
+}
