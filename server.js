@@ -122,6 +122,16 @@ async function initDb() {
     );
   `);
   await pool.query(`ALTER TABLE user_plans ADD COLUMN IF NOT EXISTS guiderules TEXT DEFAULT '';`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS mentor_messages (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
 }
 
 // ---------- Middleware ----------
@@ -376,6 +386,104 @@ app.post('/api/account/verify', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error verifying email.' });
+  }
+});
+
+// ---------- Mentor AI ----------
+// Requires an ANTHROPIC_API_KEY environment variable. Get one from
+// console.anthropic.com → API Keys, then add it on Render's Environment tab.
+async function askMentorAI(userId, userMessage) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return "Mentor AI isn't connected yet — add an ANTHROPIC_API_KEY environment variable to enable it.";
+  }
+
+  // Pull recent chat history for context (last 20 messages)
+  const historyResult = await pool.query(
+    'SELECT role, content FROM mentor_messages WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20',
+    [userId]
+  );
+  const history = historyResult.rows.reverse().map(r => ({ role: r.role, content: r.content }));
+
+  const systemPrompt = `You are an experienced, supportive trading mentor inside a trading journal app.
+The user journals their trades, plan, and emotions here. When they describe a mistake or a losing trade,
+help them understand what went wrong, relate it back to trading psychology and discipline, and give
+practical, encouraging advice — never reckless financial advice, no specific buy/sell signals, no
+guarantees of profit. Keep responses concise and conversational, like a real mentor would talk, not a
+wall of text. You are not a licensed financial advisor; if asked for specific financial advice, give
+general principles and encourage the user to do their own research and risk management.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
+        system: systemPrompt,
+        messages: [...history, { role: 'user', content: userMessage }]
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Anthropic API error:', errText);
+      return "Sorry, I couldn't reach the mentor service just now. Try again in a moment.";
+    }
+    const data = await response.json();
+    const textBlock = data.content.find(b => b.type === 'text');
+    return textBlock ? textBlock.text : "I'm not sure how to respond to that — try rephrasing?";
+  } catch (err) {
+    console.error('Mentor AI error:', err);
+    return "Sorry, something went wrong reaching the mentor service.";
+  }
+}
+
+app.get('/api/mentor/messages', requireAuth, requireVerified, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT role, content, created_at FROM mentor_messages WHERE user_id = $1 ORDER BY created_at ASC',
+      [req.session.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error loading messages.' });
+  }
+});
+
+app.post('/api/mentor/chat', requireAuth, requireVerified, async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.trim()) {
+    return res.status(400).json({ error: 'Message cannot be empty.' });
+  }
+  try {
+    await pool.query(
+      'INSERT INTO mentor_messages (user_id, role, content) VALUES ($1, $2, $3)',
+      [req.session.userId, 'user', message]
+    );
+    const reply = await askMentorAI(req.session.userId, message);
+    await pool.query(
+      'INSERT INTO mentor_messages (user_id, role, content) VALUES ($1, $2, $3)',
+      [req.session.userId, 'assistant', reply]
+    );
+    res.json({ reply });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error chatting with mentor.' });
+  }
+});
+
+app.delete('/api/mentor/messages', requireAuth, requireVerified, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM mentor_messages WHERE user_id = $1', [req.session.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error clearing messages.' });
   }
 });
 
