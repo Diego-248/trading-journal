@@ -8,6 +8,45 @@
 <meta name="theme-color" content="#14110b">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="css/style.css">
+<style>
+  .timer-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .timer-btn {
+    padding: 10px 16px; border-radius: 8px; background: var(--panel-2);
+    border: 1px solid var(--border); color: var(--text); cursor: pointer; font-weight: 600;
+  }
+  .timer-btn.active { background: var(--accent); color: #14110b; border-color: var(--accent); }
+  .timer-display {
+    font-size: 2.4rem; font-weight: 700; text-align: center; margin: 18px 0;
+    color: var(--accent); display: none;
+  }
+  .timer-controls { display: flex; gap: 10px; justify-content: center; display: none; }
+
+  .sound-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+  .sound-btn {
+    padding: 14px; border-radius: 8px; background: var(--panel-2);
+    border: 1px solid var(--border); color: var(--text); cursor: pointer; text-align: center; font-weight: 600;
+  }
+  .sound-btn.playing { background: var(--accent); color: #14110b; border-color: var(--accent); }
+
+  .emotion-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .emotion-tab {
+    padding: 8px 14px; border-radius: 20px; background: var(--panel-2);
+    border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 0.85rem;
+  }
+  .emotion-tab.active { background: var(--accent); color: #14110b; border-color: var(--accent); }
+  .song-list { margin-top: 14px; }
+  .song-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .song-item:last-child { border-bottom: none; }
+  .song-item .song-name { font-weight: 600; font-size: 0.92rem; }
+  .song-item .song-artist { color: var(--muted); font-size: 0.8rem; }
+  .song-item a {
+    font-size: 0.78rem; padding: 6px 10px; border-radius: 6px;
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--accent);
+  }
+</style>
 </head>
 <body>
   <nav class="navbar">
@@ -25,13 +64,65 @@
   </nav>
 
   <div class="container">
-    <div class="card" style="text-align:center; padding-top:60px; padding-bottom:60px;">
-      <h2 style="justify-content:center; font-size:1.5rem;">Sanctuary</h2>
-      <p style="color:var(--muted);">New features coming soon.</p>
+
+    <div class="card">
+      <h2>Sanctuary</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">
+        A space to reset after any trading day — good or bad. Take a moment with a timer, a calming sound, or music that matches how you feel.
+      </p>
     </div>
+
+    <div class="card">
+      <h2>Take a Break</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">Pick how long you want to sit with yourself.</p>
+      <div class="timer-grid">
+        <button class="timer-btn" data-minutes="5">5 min</button>
+        <button class="timer-btn" data-minutes="10">10 min</button>
+        <button class="timer-btn" data-minutes="15">15 min</button>
+        <button class="timer-btn" data-minutes="30">30 min</button>
+        <button class="timer-btn" data-minutes="45">45 min</button>
+        <button class="timer-btn" data-minutes="60">60 min</button>
+      </div>
+      <div class="timer-display" id="timerDisplay">00:00</div>
+      <div class="timer-controls" id="timerControls">
+        <button class="btn-secondary" id="pauseTimerBtn">Pause</button>
+        <button class="btn-secondary" id="resetTimerBtn">Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Calming Sounds</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">Gentle ambient sounds to help you settle.</p>
+      <div class="sound-grid">
+        <button class="sound-btn" data-sound="rain">🌧️ Rain</button>
+        <button class="sound-btn" data-sound="ocean">🌊 Ocean Waves</button>
+        <button class="sound-btn" data-sound="wind">🍃 Wind</button>
+        <button class="sound-btn" data-sound="whitenoise">🌫️ White Noise</button>
+        <button class="sound-btn" data-sound="fire">🔥 Crackling Fire</button>
+        <button class="sound-btn" data-sound="hum">🎐 Deep Hum</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Music For How You Feel</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">Pick the section that matches your mood right now.</p>
+      <div class="emotion-tabs" id="emotionTabs">
+        <div class="emotion-tab active" data-emotion="sad">Sad</div>
+        <div class="emotion-tab" data-emotion="relieved">Relieved</div>
+        <div class="emotion-tab" data-emotion="calm">Calm</div>
+        <div class="emotion-tab" data-emotion="anxious">Anxious</div>
+        <div class="emotion-tab" data-emotion="happy">Happy / Celebrating</div>
+        <div class="emotion-tab" data-emotion="motivated">Motivated</div>
+      </div>
+      <div class="song-list" id="songList"></div>
+      <p style="color:var(--muted); font-size:0.75rem; margin-top:10px;">
+        Tap "Listen" to search for the track on YouTube.
+      </p>
+    </div>
+
   </div>
 
   <script src="js/auth.js"></script>
-  <script>requireLogin();</script>
+  <script src="js/sanctuary.js"></script>
 </body>
 </html>
