@@ -9,17 +9,44 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .timer-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  /* ---- Now Playing hero (top of page) ---- */
+  .now-playing-hero {
+    width: 100%;
+    min-height: 280px;
+    border-radius: 0 0 18px 18px;
+    background: linear-gradient(160deg, #2a2316 0%, #14110b 70%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 20px;
+    text-align: center;
+    transition: background 0.6s ease;
+    position: relative;
+  }
+  .now-playing-hero.has-song {
+    background: linear-gradient(160deg, #4a3a12 0%, #14110b 75%);
+  }
+  .now-playing-title { font-size: 1.1rem; color: var(--muted); display: none; }
+  .now-playing-title.show { display: block; }
+  .now-playing-song { font-size: 1.4rem; font-weight: 700; color: var(--accent); margin-top: 4px; display: none; }
+  .now-playing-song.show { display: block; }
+  .now-playing-artist { color: var(--muted); font-size: 0.9rem; display: none; margin-bottom: 14px; }
+  .now-playing-artist.show { display: block; }
+
+  .timer-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
   .timer-btn {
     padding: 10px 16px; border-radius: 8px; background: var(--panel-2);
     border: 1px solid var(--border); color: var(--text); cursor: pointer; font-weight: 600;
   }
   .timer-btn.active { background: var(--accent); color: #14110b; border-color: var(--accent); }
   .timer-display {
-    font-size: 2.4rem; font-weight: 700; text-align: center; margin: 18px 0;
+    font-size: 3rem; font-weight: 700; text-align: center; margin: 14px 0;
     color: var(--accent); display: none;
   }
-  .timer-controls { display: flex; gap: 10px; justify-content: center; display: none; }
+  .timer-controls { display: none; gap: 10px; justify-content: center; }
+
+  #songAudioFrame { display: none; }
 
   .sound-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
   .sound-btn {
@@ -42,10 +69,6 @@
   .song-item:last-child { border-bottom: none; }
   .song-item .song-name { font-weight: 600; font-size: 0.92rem; }
   .song-item .song-artist { color: var(--muted); font-size: 0.8rem; }
-  .song-item a {
-    font-size: 0.78rem; padding: 6px 10px; border-radius: 6px;
-    background: var(--panel-2); border: 1px solid var(--border); color: var(--accent);
-  }
 </style>
 </head>
 <body>
@@ -53,31 +76,35 @@
     <div class="brand">My Trading<span>Plan and Journal</span></div>
   </nav>
 
+  <div class="now-playing-hero" id="nowPlayingHero">
+    <div class="now-playing-title" id="nowPlayingLabel">Now Playing</div>
+    <div class="now-playing-song" id="nowPlayingSong"></div>
+    <div class="now-playing-artist" id="nowPlayingArtist"></div>
+
+    <div class="timer-grid">
+      <button class="timer-btn" data-minutes="5">5 min</button>
+      <button class="timer-btn" data-minutes="10">10 min</button>
+      <button class="timer-btn" data-minutes="15">15 min</button>
+      <button class="timer-btn" data-minutes="30">30 min</button>
+      <button class="timer-btn" data-minutes="45">45 min</button>
+      <button class="timer-btn" data-minutes="60">60 min</button>
+    </div>
+    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="timer-controls" id="timerControls">
+      <button class="btn-secondary" id="pauseTimerBtn">Pause</button>
+      <button class="btn-secondary" id="resetTimerBtn">Reset</button>
+    </div>
+
+    <iframe id="songAudioFrame" src="" allow="autoplay; encrypted-media"></iframe>
+  </div>
+
   <div class="container">
 
     <div class="card">
       <h2>Sanctuary</h2>
       <p style="color:var(--muted); font-size:0.85rem;">
-        A space to reset after any trading day — good or bad. Take a moment with a timer, a calming sound, or music that matches how you feel.
+        A space to reset after any trading day — good or bad. Pick a timer length above, or a calming sound or song below — your timer keeps running, and stops the music automatically when it ends.
       </p>
-    </div>
-
-    <div class="card">
-      <h2>Take a Break</h2>
-      <p style="color:var(--muted); font-size:0.85rem;">Pick how long you want to sit with yourself.</p>
-      <div class="timer-grid">
-        <button class="timer-btn" data-minutes="5">5 min</button>
-        <button class="timer-btn" data-minutes="10">10 min</button>
-        <button class="timer-btn" data-minutes="15">15 min</button>
-        <button class="timer-btn" data-minutes="30">30 min</button>
-        <button class="timer-btn" data-minutes="45">45 min</button>
-        <button class="timer-btn" data-minutes="60">60 min</button>
-      </div>
-      <div class="timer-display" id="timerDisplay">00:00</div>
-      <div class="timer-controls" id="timerControls">
-        <button class="btn-secondary" id="pauseTimerBtn">Pause</button>
-        <button class="btn-secondary" id="resetTimerBtn">Reset</button>
-      </div>
     </div>
 
     <div class="card">
@@ -105,14 +132,9 @@
         <div class="emotion-tab" data-emotion="motivated">Motivated</div>
       </div>
 
-      <div id="playerWrap" style="display:none; margin-top:14px;">
-        <iframe id="songPlayer" width="100%" height="200" style="border-radius:8px; border:none;"
-          src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-      </div>
-
       <div class="song-list" id="songList"></div>
       <p style="color:var(--muted); font-size:0.75rem; margin-top:10px;">
-        Tap a track to play it right here in the app.
+        Tap a track — it plays at the top of the screen.
       </p>
     </div>
 
