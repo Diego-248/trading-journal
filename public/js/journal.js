@@ -12,7 +12,6 @@ function showToast(msg) {
 // ---------- Chart screenshot upload boxes ----------
 let htfImageData = '';
 let mtfImageData = '';
-let mtf2ImageData = '';
 let ltfImageData = '';
 
 function wireUploadBox(boxId, inputId, previewId, setter) {
@@ -37,15 +36,13 @@ function wireUploadBox(boxId, inputId, previewId, setter) {
 
 wireUploadBox('htfBox', 'htfInput', 'htfPreview', (v) => htfImageData = v);
 wireUploadBox('mtfBox', 'mtfInput', 'mtfPreview', (v) => mtfImageData = v);
-wireUploadBox('mtf2Box', 'mtf2Input', 'mtf2Preview', (v) => mtf2ImageData = v);
 wireUploadBox('ltfBox', 'ltfInput', 'ltfPreview', (v) => ltfImageData = v);
 
 function resetUploadBoxes() {
   htfImageData = '';
   mtfImageData = '';
-  mtf2ImageData = '';
   ltfImageData = '';
-  ['htf', 'mtf', 'mtf2', 'ltf'].forEach(prefix => {
+  ['htf', 'mtf', 'ltf'].forEach(prefix => {
     document.getElementById(prefix + 'Preview').style.display = 'none';
     document.getElementById(prefix + 'Box').querySelector('.upload-placeholder').style.display = 'inline';
   });
@@ -70,7 +67,6 @@ document.getElementById('journalForm').addEventListener('submit', async (e) => {
     notes: document.getElementById('notes').value,
     htf_image: htfImageData,
     mtf_image: mtfImageData,
-    mtf2_image: mtf2ImageData,
     ltf_image: ltfImageData
   };
 

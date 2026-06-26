@@ -1,4 +1,5 @@
-// history.js - loads all journal entries and shows full lesson/notes per trade
+// history.js - loads all journal entries as collapsed summary rows;
+// tapping a row expands it to show the full trade detail.
 
 requireLogin();
 
@@ -17,19 +18,28 @@ async function loadEntries() {
 
   for (const e of entries) {
     const followedBadge = e.followed_plan === 'Yes'
-      ? '<span class="badge yes">Followed plan: Yes</span>'
-      : '<span class="badge no">Followed plan: No</span>';
+      ? '<span class="badge yes">Yes</span>'
+      : '<span class="badge no">No</span>';
 
     const card = document.createElement('div');
     card.className = 'card entry-card';
-    card.innerHTML = `
-      <div class="entry-head">
-        <div>
-          <strong>${e.symbol || 'Untitled trade'}</strong>
-          <span class="meta"> — ${e.trade_date || ''}</span>
-        </div>
-        <div>${followedBadge}</div>
+
+    const summary = document.createElement('div');
+    summary.className = 'entry-summary';
+    summary.style.cssText = 'display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
+    summary.innerHTML = `
+      <div>
+        <strong>${e.symbol || 'Untitled trade'}</strong>
+        <span class="meta"> — ${e.trade_date || ''} — ${e.result || ''}</span>
       </div>
+      <div>${followedBadge} <span class="expand-arrow" style="margin-left:8px; color:var(--muted);">▾</span></div>
+    `;
+
+    const detail = document.createElement('div');
+    detail.className = 'entry-detail';
+    detail.style.display = 'none';
+    detail.style.marginTop = '14px';
+    detail.innerHTML = `
       <div class="meta">
         Result: ${e.result || '—'} &nbsp;|&nbsp; R: ${e.r_value || '—'} &nbsp;|&nbsp;
         Entry: ${e.entry_price || '—'} &nbsp;|&nbsp; SL: ${e.stop_loss || '—'} &nbsp;|&nbsp; TP: ${e.take_profit || '—'}
@@ -46,22 +56,33 @@ async function loadEntries() {
         <div class="value">${e.lesson ? escapeHtml(e.lesson) : '<em style="color:var(--muted)">Nothing written</em>'}</div>
       </div>
 
-      ${(e.htf_image || e.mtf_image || e.mtf2_image || e.ltf_image) ? `
+      ${(e.htf_image || e.mtf_image || e.ltf_image) ? `
       <div class="entry-section">
         <div class="label">Chart screenshots (tap to enlarge)</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
           ${e.htf_image ? `<div><div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">HTF</div><img src="${e.htf_image}" class="chart-thumb" style="width:100px; height:80px; object-fit:cover; border-radius:6px; cursor:pointer;"></div>` : ''}
           ${e.mtf_image ? `<div><div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">MTF</div><img src="${e.mtf_image}" class="chart-thumb" style="width:100px; height:80px; object-fit:cover; border-radius:6px; cursor:pointer;"></div>` : ''}
-          ${e.mtf2_image ? `<div><div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">2nd MTF</div><img src="${e.mtf2_image}" class="chart-thumb" style="width:100px; height:80px; object-fit:cover; border-radius:6px; cursor:pointer;"></div>` : ''}
           ${e.ltf_image ? `<div><div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">LTF</div><img src="${e.ltf_image}" class="chart-thumb" style="width:100px; height:80px; object-fit:cover; border-radius:6px; cursor:pointer;"></div>` : ''}
         </div>
       </div>` : ''}
     `;
+
+    summary.addEventListener('click', () => {
+      const isOpen = detail.style.display === 'block';
+      detail.style.display = isOpen ? 'none' : 'block';
+      summary.querySelector('.expand-arrow').textContent = isOpen ? '▾' : '▴';
+    });
+
+    card.appendChild(summary);
+    card.appendChild(detail);
     wrap.appendChild(card);
   }
 
   wrap.querySelectorAll('.chart-thumb').forEach(img => {
-    img.addEventListener('click', () => openLightbox(img.src));
+    img.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openLightbox(img.src);
+    });
   });
 }
 

@@ -171,48 +171,50 @@ let musicCurrentBtn = null;
 
 // Musical scales (frequencies in Hz) and tempo/character per track, grouped by mood.
 // Everything here is generated on the fly — no copyrighted recordings involved.
+// Each "note" plays as a soft chord (root + a harmony note) with a slow piano-like
+// attack/decay for a more instrumental, less chip-tune feel.
 const tracksByMood = {
   sad: [
-    { name: 'Quiet Rain (A minor)', scale: [220.0, 246.9, 261.6, 293.7, 329.6], tempo: 900, wave: 'sine' },
-    { name: 'Slow Ache', scale: [196.0, 220.0, 246.9, 261.6], tempo: 1100, wave: 'triangle' },
-    { name: 'Heavy Heart', scale: [174.6, 196.0, 207.7, 233.1], tempo: 950, wave: 'sine' },
-    { name: 'Grey Sky', scale: [207.7, 233.1, 246.9, 277.2], tempo: 1000, wave: 'sine' },
-    { name: 'Letting Go', scale: [185.0, 207.7, 220.0, 246.9, 277.2], tempo: 850, wave: 'triangle' }
+    { name: 'Quiet Rain (A minor)', scale: [220.0, 261.6, 293.7, 329.6], harmony: 1.5, tempo: 1600, wave: 'sine' },
+    { name: 'Slow Ache', scale: [196.0, 220.0, 246.9, 261.6], harmony: 1.25, tempo: 1800, wave: 'sine' },
+    { name: 'Heavy Heart', scale: [174.6, 196.0, 207.7, 233.1], harmony: 1.5, tempo: 1700, wave: 'triangle' },
+    { name: 'Grey Sky', scale: [207.7, 233.1, 246.9, 277.2], harmony: 1.25, tempo: 1750, wave: 'sine' },
+    { name: 'Letting Go', scale: [185.0, 207.7, 220.0, 246.9], harmony: 1.5, tempo: 1650, wave: 'sine' }
   ],
   relieved: [
-    { name: 'Exhale', scale: [261.6, 293.7, 329.6, 392.0], tempo: 700, wave: 'sine' },
-    { name: 'Soft Landing', scale: [246.9, 277.2, 311.1, 369.9], tempo: 750, wave: 'sine' },
-    { name: 'Steady Now', scale: [220.0, 261.6, 293.7, 329.6], tempo: 800, wave: 'triangle' },
-    { name: 'Untangled', scale: [233.1, 277.2, 311.1, 349.2], tempo: 720, wave: 'sine' },
-    { name: 'Clear Mind', scale: [196.0, 246.9, 293.7, 329.6], tempo: 780, wave: 'sine' }
+    { name: 'Exhale', scale: [261.6, 293.7, 329.6, 392.0], harmony: 1.25, tempo: 1400, wave: 'sine' },
+    { name: 'Soft Landing', scale: [246.9, 277.2, 311.1, 369.9], harmony: 1.5, tempo: 1450, wave: 'sine' },
+    { name: 'Steady Now', scale: [220.0, 261.6, 293.7, 329.6], harmony: 1.25, tempo: 1500, wave: 'triangle' },
+    { name: 'Untangled', scale: [233.1, 277.2, 311.1, 349.2], harmony: 1.5, tempo: 1400, wave: 'sine' },
+    { name: 'Clear Mind', scale: [196.0, 246.9, 293.7, 329.6], harmony: 1.25, tempo: 1500, wave: 'sine' }
   ],
   calm: [
-    { name: 'Still Water', scale: [261.6, 311.1, 349.2, 392.0], tempo: 1100, wave: 'sine' },
-    { name: 'Slow Drift', scale: [220.0, 261.6, 293.7, 349.2], tempo: 1200, wave: 'sine' },
-    { name: 'Open Sky', scale: [196.0, 233.1, 277.2, 329.6], tempo: 1150, wave: 'triangle' },
-    { name: 'Gentle Pulse', scale: [246.9, 293.7, 329.6, 392.0], tempo: 1000, wave: 'sine' },
-    { name: 'Resting Mind', scale: [174.6, 220.0, 261.6, 311.1], tempo: 1250, wave: 'sine' }
+    { name: 'Still Water', scale: [261.6, 311.1, 349.2, 392.0], harmony: 1.5, tempo: 2000, wave: 'sine' },
+    { name: 'Slow Drift', scale: [220.0, 261.6, 293.7, 349.2], harmony: 1.25, tempo: 2100, wave: 'sine' },
+    { name: 'Open Sky', scale: [196.0, 233.1, 277.2, 329.6], harmony: 1.5, tempo: 2000, wave: 'triangle' },
+    { name: 'Gentle Pulse', scale: [246.9, 293.7, 329.6, 392.0], harmony: 1.25, tempo: 1900, wave: 'sine' },
+    { name: 'Resting Mind', scale: [174.6, 220.0, 261.6, 311.1], harmony: 1.5, tempo: 2150, wave: 'sine' }
   ],
   anxious: [
-    { name: 'Settle', scale: [220.0, 246.9, 261.6, 293.7], tempo: 900, wave: 'sine' },
-    { name: 'Ground Yourself', scale: [196.0, 220.0, 246.9, 277.2], tempo: 950, wave: 'sine' },
-    { name: 'Slow Breath', scale: [233.1, 261.6, 293.7, 311.1], tempo: 1000, wave: 'triangle' },
-    { name: 'Steady Hands', scale: [207.7, 233.1, 261.6, 293.7], tempo: 880, wave: 'sine' },
-    { name: 'Coming Down', scale: [185.0, 220.0, 246.9, 277.2], tempo: 1050, wave: 'sine' }
+    { name: 'Settle', scale: [220.0, 246.9, 261.6, 293.7], harmony: 1.25, tempo: 1600, wave: 'sine' },
+    { name: 'Ground Yourself', scale: [196.0, 220.0, 246.9, 277.2], harmony: 1.5, tempo: 1650, wave: 'sine' },
+    { name: 'Slow Breath', scale: [233.1, 261.6, 293.7, 311.1], harmony: 1.25, tempo: 1700, wave: 'triangle' },
+    { name: 'Steady Hands', scale: [207.7, 233.1, 261.6, 293.7], harmony: 1.5, tempo: 1600, wave: 'sine' },
+    { name: 'Coming Down', scale: [185.0, 220.0, 246.9, 277.2], harmony: 1.25, tempo: 1750, wave: 'sine' }
   ],
   happy: [
-    { name: 'Bright Morning (C major)', scale: [261.6, 329.6, 392.0, 440.0, 523.3], tempo: 450, wave: 'triangle' },
-    { name: 'Light Steps', scale: [293.7, 349.2, 440.0, 523.3], tempo: 480, wave: 'square' },
-    { name: 'Sunny Walk', scale: [329.6, 392.0, 440.0, 523.3, 587.3], tempo: 420, wave: 'triangle' },
-    { name: 'Good News', scale: [349.2, 440.0, 523.3, 587.3], tempo: 460, wave: 'triangle' },
-    { name: 'Celebration', scale: [392.0, 440.0, 523.3, 659.3], tempo: 400, wave: 'square' }
+    { name: 'Bright Morning (C major)', scale: [261.6, 329.6, 392.0, 440.0], harmony: 1.25, tempo: 1100, wave: 'triangle' },
+    { name: 'Light Steps', scale: [293.7, 349.2, 440.0, 523.3], harmony: 1.25, tempo: 1050, wave: 'sine' },
+    { name: 'Sunny Walk', scale: [329.6, 392.0, 440.0, 523.3], harmony: 1.25, tempo: 1000, wave: 'triangle' },
+    { name: 'Good News', scale: [349.2, 440.0, 523.3, 587.3], harmony: 1.25, tempo: 1080, wave: 'triangle' },
+    { name: 'Celebration', scale: [392.0, 440.0, 523.3, 659.3], harmony: 1.25, tempo: 950, wave: 'sine' }
   ],
   motivated: [
-    { name: 'Rise Up', scale: [261.6, 311.1, 392.0, 440.0], tempo: 350, wave: 'square' },
-    { name: 'Forward', scale: [293.7, 349.2, 440.0, 493.9], tempo: 320, wave: 'square' },
-    { name: 'Drive', scale: [220.0, 277.2, 329.6, 392.0], tempo: 340, wave: 'sawtooth' },
-    { name: 'Push Through', scale: [246.9, 311.1, 369.9, 440.0], tempo: 300, wave: 'square' },
-    { name: 'Next Trade', scale: [277.2, 349.2, 415.3, 493.9], tempo: 330, wave: 'sawtooth' }
+    { name: 'Rise Up', scale: [261.6, 311.1, 392.0, 440.0], harmony: 1.25, tempo: 850, wave: 'triangle' },
+    { name: 'Forward', scale: [293.7, 349.2, 440.0, 493.9], harmony: 1.25, tempo: 800, wave: 'sine' },
+    { name: 'Drive', scale: [220.0, 277.2, 329.6, 392.0], harmony: 1.5, tempo: 820, wave: 'triangle' },
+    { name: 'Push Through', scale: [246.9, 311.1, 369.9, 440.0], harmony: 1.25, tempo: 780, wave: 'sine' },
+    { name: 'Next Trade', scale: [277.2, 349.2, 415.3, 493.9], harmony: 1.25, tempo: 800, wave: 'triangle' }
   ]
 };
 
@@ -235,23 +237,42 @@ function playMusic(track, btn) {
   const ctx = musicCtx;
   let noteIndex = 0;
 
-  function playNote() {
-    const freq = track.scale[noteIndex % track.scale.length];
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = track.wave;
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.05);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + track.tempo / 1000 * 0.9);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + track.tempo / 1000);
+  // A gentle, slow-attack delay node gives a soft "instrumental room" feel
+  const delay = ctx.createDelay();
+  delay.delayTime.value = 0.35;
+  const delayGain = ctx.createGain();
+  delayGain.gain.value = 0.25;
+  delay.connect(delayGain).connect(ctx.destination);
+
+  function playChord() {
+    const root = track.scale[noteIndex % track.scale.length];
+    const noteLength = track.tempo / 1000;
+
+    [root, root * track.harmony].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = track.wave;
+      osc.frequency.value = freq;
+
+      // Slow piano-like attack and long, smooth decay (more instrumental, less "blippy")
+      const vol = i === 0 ? 0.14 : 0.07;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(vol, ctx.currentTime + 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + noteLength * 1.6);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.connect(delay);
+
+      osc.start();
+      osc.stop(ctx.currentTime + noteLength * 1.6);
+    });
+
     noteIndex++;
   }
 
-  playNote();
-  musicIntervalId = setInterval(playNote, track.tempo);
+  playChord();
+  musicIntervalId = setInterval(playChord, track.tempo);
   btn.classList.add('playing');
   btn.textContent = 'Stop';
   musicCurrentBtn = btn;

@@ -36,10 +36,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ---------- Three-dot menu button (top-left) for switching between screens ----------
+const APP_PAGES = [
+  { href: 'index.html', label: 'Plan' },
+  { href: 'edge.html', label: 'Edge' },
+  { href: 'journal.html', label: 'Trade Results' },
+  { href: 'sanctuary.html', label: 'Sanctuary' },
+  { href: 'mentor.html', label: 'Mentor AI' },
+  { href: 'history.html', label: 'Journals' },
+  { href: 'calendar.html', label: 'Calendar' },
+  { href: 'profile.html', label: 'Profile' },
+  { href: 'settings.html', label: 'Settings' }
+];
+
 function setupMenuButton() {
   const navbar = document.querySelector('.navbar');
-  const navLinks = document.querySelector('.nav-links');
-  if (!navbar || !navLinks || document.getElementById('menuBtn')) return;
+  if (!navbar || document.getElementById('menuBtn')) return;
+
+  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
 
   const menuBtn = document.createElement('button');
   menuBtn.id = 'menuBtn';
@@ -48,7 +61,7 @@ function setupMenuButton() {
   menuBtn.style.cssText = `
     background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
     font-size: 1.3rem; line-height: 1; width: 38px; height: 38px; border-radius: 8px;
-    cursor: pointer; margin-right: 12px; order: -1;
+    cursor: pointer; margin-right: 12px;
   `;
 
   const dropdown = document.createElement('div');
@@ -60,14 +73,14 @@ function setupMenuButton() {
     box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   `;
 
-  // Build the menu from the same links already in the top nav
-  navLinks.querySelectorAll('a').forEach(link => {
+  APP_PAGES.forEach(page => {
+    const isActive = page.href === currentPage;
     const item = document.createElement('a');
-    item.href = link.getAttribute('href');
-    item.textContent = link.textContent;
+    item.href = page.href;
+    item.textContent = page.label;
     item.style.cssText = `
-      padding: 10px 12px; border-radius: 6px; color: ${link.classList.contains('active') ? 'var(--accent)' : 'var(--text)'};
-      font-weight: ${link.classList.contains('active') ? '700' : '500'}; text-decoration: none; font-size: 0.92rem;
+      padding: 10px 12px; border-radius: 6px; color: ${isActive ? 'var(--accent)' : 'var(--text)'};
+      font-weight: ${isActive ? '700' : '500'}; text-decoration: none; font-size: 0.92rem;
     `;
     dropdown.appendChild(item);
   });
