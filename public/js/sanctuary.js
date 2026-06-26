@@ -155,7 +155,7 @@ document.querySelectorAll('.sound-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const wasPlaying = btn.classList.contains('playing');
     stopCurrentSound();
-    if (typeof stopMusic === 'function') stopMusic();
+    if (typeof stopSong === 'function') stopSong();
     if (!wasPlaying) {
       playSound(btn.dataset.sound);
       btn.classList.add('playing');
@@ -164,141 +164,102 @@ document.querySelectorAll('.sound-btn').forEach(btn => {
   });
 });
 
-// ---------- Mood-based music (original, generated live with Web Audio API — plays inside the app, no external links) ----------
-let musicCtx = null;
-let musicIntervalId = null;
-let musicCurrentBtn = null;
+// ---------- Mood-based real music (embedded YouTube player — plays inside the app) ----------
+// Each track below is a real, well-known song whose official YouTube video ID
+// was looked up directly, so playback uses YouTube's official embedded player.
+// The audio plays inside this app's UI; no separate app or external site opens.
+let currentPlayingSongBtn = null;
 
-// Musical scales (frequencies in Hz) and tempo/character per track, grouped by mood.
-// Everything here is generated on the fly — no copyrighted recordings involved.
-// Each "note" plays as a soft chord (root + a harmony note) with a slow piano-like
-// attack/decay for a more instrumental, less chip-tune feel.
-const tracksByMood = {
+const songsByMood = {
   sad: [
-    { name: 'Quiet Rain (A minor)', scale: [220.0, 261.6, 293.7, 329.6], harmony: 1.5, tempo: 1600, wave: 'sine' },
-    { name: 'Slow Ache', scale: [196.0, 220.0, 246.9, 261.6], harmony: 1.25, tempo: 1800, wave: 'sine' },
-    { name: 'Heavy Heart', scale: [174.6, 196.0, 207.7, 233.1], harmony: 1.5, tempo: 1700, wave: 'triangle' },
-    { name: 'Grey Sky', scale: [207.7, 233.1, 246.9, 277.2], harmony: 1.25, tempo: 1750, wave: 'sine' },
-    { name: 'Letting Go', scale: [185.0, 207.7, 220.0, 246.9], harmony: 1.5, tempo: 1650, wave: 'sine' }
+    { title: 'Someone Like You', artist: 'Adele', videoId: 'hLQl3WQQoQ0' },
+    { title: 'Fix You', artist: 'Coldplay', videoId: 'k4V3Mo61fJM' },
+    { title: 'Skinny Love', artist: 'Bon Iver', videoId: 'ssdgFoHLwnk' },
+    { title: 'The Night We Met', artist: 'Lord Huron', videoId: 'KtlgYxa6BMU' },
+    { title: 'Mad World', artist: 'Gary Jules', videoId: 'etSbOs3aUqI' }
   ],
   relieved: [
-    { name: 'Exhale', scale: [261.6, 293.7, 329.6, 392.0], harmony: 1.25, tempo: 1400, wave: 'sine' },
-    { name: 'Soft Landing', scale: [246.9, 277.2, 311.1, 369.9], harmony: 1.5, tempo: 1450, wave: 'sine' },
-    { name: 'Steady Now', scale: [220.0, 261.6, 293.7, 329.6], harmony: 1.25, tempo: 1500, wave: 'triangle' },
-    { name: 'Untangled', scale: [233.1, 277.2, 311.1, 349.2], harmony: 1.5, tempo: 1400, wave: 'sine' },
-    { name: 'Clear Mind', scale: [196.0, 246.9, 293.7, 329.6], harmony: 1.25, tempo: 1500, wave: 'sine' }
+    { title: 'Weightless', artist: 'Marconi Union', videoId: 'UfcAVejslrU' },
+    { title: 'Breathe Me', artist: 'Sia', videoId: 'ghPcYqn0p4Y' },
+    { title: 'Skinny Love', artist: 'Bon Iver', videoId: 'ssdgFoHLwnk' },
+    { title: 'Fix You', artist: 'Coldplay', videoId: 'k4V3Mo61fJM' },
+    { title: 'River Flows in You', artist: 'Yiruma', videoId: '7maJOI3QMu0' }
   ],
   calm: [
-    { name: 'Still Water', scale: [261.6, 311.1, 349.2, 392.0], harmony: 1.5, tempo: 2000, wave: 'sine' },
-    { name: 'Slow Drift', scale: [220.0, 261.6, 293.7, 349.2], harmony: 1.25, tempo: 2100, wave: 'sine' },
-    { name: 'Open Sky', scale: [196.0, 233.1, 277.2, 329.6], harmony: 1.5, tempo: 2000, wave: 'triangle' },
-    { name: 'Gentle Pulse', scale: [246.9, 293.7, 329.6, 392.0], harmony: 1.25, tempo: 1900, wave: 'sine' },
-    { name: 'Resting Mind', scale: [174.6, 220.0, 261.6, 311.1], harmony: 1.5, tempo: 2150, wave: 'sine' }
+    { title: 'River Flows in You', artist: 'Yiruma', videoId: '7maJOI3QMu0' },
+    { title: 'Weightless', artist: 'Marconi Union', videoId: 'UfcAVejslrU' },
+    { title: 'The Night We Met', artist: 'Lord Huron', videoId: 'KtlgYxa6BMU' },
+    { title: 'Breathe Me', artist: 'Sia', videoId: 'ghPcYqn0p4Y' },
+    { title: 'Skinny Love', artist: 'Bon Iver', videoId: 'ssdgFoHLwnk' }
   ],
   anxious: [
-    { name: 'Settle', scale: [220.0, 246.9, 261.6, 293.7], harmony: 1.25, tempo: 1600, wave: 'sine' },
-    { name: 'Ground Yourself', scale: [196.0, 220.0, 246.9, 277.2], harmony: 1.5, tempo: 1650, wave: 'sine' },
-    { name: 'Slow Breath', scale: [233.1, 261.6, 293.7, 311.1], harmony: 1.25, tempo: 1700, wave: 'triangle' },
-    { name: 'Steady Hands', scale: [207.7, 233.1, 261.6, 293.7], harmony: 1.5, tempo: 1600, wave: 'sine' },
-    { name: 'Coming Down', scale: [185.0, 220.0, 246.9, 277.2], harmony: 1.25, tempo: 1750, wave: 'sine' }
+    { title: 'Weightless', artist: 'Marconi Union', videoId: 'UfcAVejslrU' },
+    { title: 'Breathe Me', artist: 'Sia', videoId: 'ghPcYqn0p4Y' },
+    { title: 'Mad World', artist: 'Gary Jules', videoId: 'etSbOs3aUqI' },
+    { title: 'Fix You', artist: 'Coldplay', videoId: 'k4V3Mo61fJM' },
+    { title: 'River Flows in You', artist: 'Yiruma', videoId: '7maJOI3QMu0' }
   ],
   happy: [
-    { name: 'Bright Morning (C major)', scale: [261.6, 329.6, 392.0, 440.0], harmony: 1.25, tempo: 1100, wave: 'triangle' },
-    { name: 'Light Steps', scale: [293.7, 349.2, 440.0, 523.3], harmony: 1.25, tempo: 1050, wave: 'sine' },
-    { name: 'Sunny Walk', scale: [329.6, 392.0, 440.0, 523.3], harmony: 1.25, tempo: 1000, wave: 'triangle' },
-    { name: 'Good News', scale: [349.2, 440.0, 523.3, 587.3], harmony: 1.25, tempo: 1080, wave: 'triangle' },
-    { name: 'Celebration', scale: [392.0, 440.0, 523.3, 659.3], harmony: 1.25, tempo: 950, wave: 'sine' }
+    { title: 'Happy', artist: 'Pharrell Williams', videoId: 'y6Sxv-sUYtM' },
+    { title: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars', videoId: 'OPf0YbXqDm0' },
+    { title: 'Walking on Sunshine', artist: 'Katrina & The Waves', videoId: 'iPUmE-tne5U' },
+    { title: "Can't Stop the Feeling!", artist: 'Justin Timberlake', videoId: 'ru0K8uYEZWw' },
+    { title: 'Good as Hell', artist: 'Lizzo', videoId: 'SmbmeOgWsqE' }
   ],
   motivated: [
-    { name: 'Rise Up', scale: [261.6, 311.1, 392.0, 440.0], harmony: 1.25, tempo: 850, wave: 'triangle' },
-    { name: 'Forward', scale: [293.7, 349.2, 440.0, 493.9], harmony: 1.25, tempo: 800, wave: 'sine' },
-    { name: 'Drive', scale: [220.0, 277.2, 329.6, 392.0], harmony: 1.5, tempo: 820, wave: 'triangle' },
-    { name: 'Push Through', scale: [246.9, 311.1, 369.9, 440.0], harmony: 1.25, tempo: 780, wave: 'sine' },
-    { name: 'Next Trade', scale: [277.2, 349.2, 415.3, 493.9], harmony: 1.25, tempo: 800, wave: 'triangle' }
+    { title: 'Eye of the Tiger', artist: 'Survivor', videoId: 'btPJPFnesV4' },
+    { title: 'Believer', artist: 'Imagine Dragons', videoId: '7wtfhZwyrcc' },
+    { title: 'Stronger', artist: 'Kanye West', videoId: 'PsO6ZnUZI0g' },
+    { title: 'Titanium', artist: 'David Guetta ft. Sia', videoId: 'JRfuAukYTKg' },
+    { title: 'Lose Yourself', artist: 'Eminem', videoId: '_Yhyp-_hX2s' }
   ]
 };
 
-function stopMusic() {
-  if (musicIntervalId) {
-    clearInterval(musicIntervalId);
-    musicIntervalId = null;
-  }
-  if (musicCurrentBtn) {
-    musicCurrentBtn.classList.remove('playing');
-    musicCurrentBtn.textContent = 'Play';
-    musicCurrentBtn = null;
+function stopSong() {
+  const player = document.getElementById('songPlayer');
+  const wrap = document.getElementById('playerWrap');
+  player.src = '';
+  wrap.style.display = 'none';
+  if (currentPlayingSongBtn) {
+    currentPlayingSongBtn.textContent = 'Play';
+    currentPlayingSongBtn.classList.remove('playing');
+    currentPlayingSongBtn = null;
   }
 }
 
-function playMusic(track, btn) {
-  stopMusic();
+function playSong(track, btn) {
   if (typeof stopCurrentSound === 'function') stopCurrentSound();
-  if (!musicCtx) musicCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const ctx = musicCtx;
-  let noteIndex = 0;
-
-  // A gentle, slow-attack delay node gives a soft "instrumental room" feel
-  const delay = ctx.createDelay();
-  delay.delayTime.value = 0.35;
-  const delayGain = ctx.createGain();
-  delayGain.gain.value = 0.25;
-  delay.connect(delayGain).connect(ctx.destination);
-
-  function playChord() {
-    const root = track.scale[noteIndex % track.scale.length];
-    const noteLength = track.tempo / 1000;
-
-    [root, root * track.harmony].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = track.wave;
-      osc.frequency.value = freq;
-
-      // Slow piano-like attack and long, smooth decay (more instrumental, less "blippy")
-      const vol = i === 0 ? 0.14 : 0.07;
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(vol, ctx.currentTime + 0.4);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + noteLength * 1.6);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      gain.connect(delay);
-
-      osc.start();
-      osc.stop(ctx.currentTime + noteLength * 1.6);
-    });
-
-    noteIndex++;
+  if (currentPlayingSongBtn) {
+    currentPlayingSongBtn.textContent = 'Play';
+    currentPlayingSongBtn.classList.remove('playing');
   }
-
-  playChord();
-  musicIntervalId = setInterval(playChord, track.tempo);
+  const player = document.getElementById('songPlayer');
+  const wrap = document.getElementById('playerWrap');
+  player.src = `https://www.youtube.com/embed/${track.videoId}?autoplay=1`;
+  wrap.style.display = 'block';
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  btn.textContent = 'Playing...';
   btn.classList.add('playing');
-  btn.textContent = 'Stop';
-  musicCurrentBtn = btn;
+  currentPlayingSongBtn = btn;
 }
 
 function renderSongs(mood) {
   const list = document.getElementById('songList');
   list.innerHTML = '';
-  tracksByMood[mood].forEach(track => {
+  songsByMood[mood].forEach(track => {
     const item = document.createElement('div');
     item.className = 'song-item';
     const btnId = 'track-' + Math.random().toString(36).slice(2);
     item.innerHTML = `
       <div>
-        <div class="song-name">${track.name}</div>
+        <div class="song-name">${track.title}</div>
+        <div class="song-artist">${track.artist}</div>
       </div>
       <button class="timer-btn" id="${btnId}" style="padding:6px 14px; font-size:0.8rem;">Play</button>
     `;
     list.appendChild(item);
     document.getElementById(btnId).addEventListener('click', (e) => {
-      const isPlaying = e.target.classList.contains('playing');
-      if (isPlaying) {
-        stopMusic();
-      } else {
-        playMusic(track, e.target);
-      }
+      playSong(track, e.target);
     });
   });
 }
@@ -307,7 +268,7 @@ document.querySelectorAll('.emotion-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.emotion-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
-    stopMusic();
+    stopSong();
     renderSongs(tab.dataset.emotion);
   });
 });
