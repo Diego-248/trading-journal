@@ -1,8 +1,14 @@
-// sanctuary.js - guards the page, handles break timers, ambient sounds,
-// and mood-based song suggestions (links out to YouTube search; no audio
-// from copyrighted tracks is hosted or streamed directly in the app).
+// sanctuary.js - guards the page, handles the Now Playing hero (timer + song
+// player merged at the top of the screen), ambient sounds, and mood-based
+// real songs played via an embedded YouTube player inside the app.
 
 requireLogin();
+
+const hero = document.getElementById('nowPlayingHero');
+const heroLabel = document.getElementById('nowPlayingLabel');
+const heroSong = document.getElementById('nowPlayingSong');
+const heroArtist = document.getElementById('nowPlayingArtist');
+const audioFrame = document.getElementById('songAudioFrame');
 
 // ---------- Timer ----------
 let timerInterval = null;
@@ -20,7 +26,7 @@ function formatTime(totalSeconds) {
 
 function startTimer(minutes, btn) {
   clearInterval(timerInterval);
-  document.querySelectorAll('.timer-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.timer-btn[data-minutes]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 
   secondsLeft = minutes * 60;
@@ -38,11 +44,13 @@ function startTimer(minutes, btn) {
       clearInterval(timerInterval);
       timerDisplay.textContent = "Time's up";
       playChime();
+      stopSong();        // stop the music once the timer ends
+      stopCurrentSound(); // also stop any ambient sound
     }
   }, 1000);
 }
 
-document.querySelectorAll('.timer-btn').forEach(btn => {
+document.querySelectorAll('.timer-btn[data-minutes]').forEach(btn => {
   btn.addEventListener('click', () => startTimer(parseInt(btn.dataset.minutes), btn));
 });
 
@@ -55,7 +63,7 @@ document.getElementById('resetTimerBtn').addEventListener('click', () => {
   clearInterval(timerInterval);
   timerDisplay.style.display = 'none';
   timerControls.style.display = 'none';
-  document.querySelectorAll('.timer-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.timer-btn[data-minutes]').forEach(b => b.classList.remove('active'));
 });
 
 // A simple original chime generated with Web Audio API (no copyrighted audio)
@@ -155,7 +163,7 @@ document.querySelectorAll('.sound-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const wasPlaying = btn.classList.contains('playing');
     stopCurrentSound();
-    if (typeof stopSong === 'function') stopSong();
+    stopSong();
     if (!wasPlaying) {
       playSound(btn.dataset.sound);
       btn.classList.add('playing');
@@ -164,10 +172,7 @@ document.querySelectorAll('.sound-btn').forEach(btn => {
   });
 });
 
-// ---------- Mood-based real music (embedded YouTube player — plays inside the app) ----------
-// Each track below is a real, well-known song whose official YouTube video ID
-// was looked up directly, so playback uses YouTube's official embedded player.
-// The audio plays inside this app's UI; no separate app or external site opens.
+// ---------- Mood-based real music (embedded YouTube player, shown in the hero at the top) ----------
 let currentPlayingSongBtn = null;
 
 const songsByMood = {
@@ -216,10 +221,12 @@ const songsByMood = {
 };
 
 function stopSong() {
-  const player = document.getElementById('songPlayer');
-  const wrap = document.getElementById('playerWrap');
-  player.src = '';
-  wrap.style.display = 'none';
+  audioFrame.src = '';
+  audioFrame.style.display = 'none';
+  hero.classList.remove('has-song');
+  heroLabel.classList.remove('show');
+  heroSong.classList.remove('show');
+  heroArtist.classList.remove('show');
   if (currentPlayingSongBtn) {
     currentPlayingSongBtn.textContent = 'Play';
     currentPlayingSongBtn.classList.remove('playing');
@@ -228,16 +235,23 @@ function stopSong() {
 }
 
 function playSong(track, btn) {
-  if (typeof stopCurrentSound === 'function') stopCurrentSound();
+  stopCurrentSound();
   if (currentPlayingSongBtn) {
     currentPlayingSongBtn.textContent = 'Play';
     currentPlayingSongBtn.classList.remove('playing');
   }
-  const player = document.getElementById('songPlayer');
-  const wrap = document.getElementById('playerWrap');
-  player.src = `https://www.youtube.com/embed/${track.videoId}?autoplay=1`;
-  wrap.style.display = 'block';
-  wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  audioFrame.src = `https://www.youtube.com/embed/${track.videoId}?autoplay=1`;
+  audioFrame.style.cssText = 'display:block; width:100%; max-width:360px; height:200px; border:none; border-radius:10px; margin-top:14px;';
+  hero.classList.add('has-song');
+  heroLabel.classList.add('show');
+  heroSong.textContent = track.title;
+  heroSong.classList.add('show');
+  heroArtist.textContent = track.artist;
+  heroArtist.classList.add('show');
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
   btn.textContent = 'Playing...';
   btn.classList.add('playing');
   currentPlayingSongBtn = btn;
