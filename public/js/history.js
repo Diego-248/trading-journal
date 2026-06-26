@@ -46,12 +46,13 @@ async function loadEntries() {
         <div class="value">${e.lesson ? escapeHtml(e.lesson) : '<em style="color:var(--muted)">Nothing written</em>'}</div>
       </div>
 
-      ${(e.htf_image || e.mtf_image || e.ltf_image) ? `
+      ${(e.htf_image || e.mtf_image || e.mtf2_image || e.ltf_image) ? `
       <div class="entry-section">
         <div class="label">Chart screenshots</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
           ${e.htf_image ? `<div><div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">HTF</div><img src="${e.htf_image}" style="width:100px; height:80px; object-fit:cover; border-radius:6px;"></div>` : ''}
           ${e.mtf_image ? `<div><div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">MTF</div><img src="${e.mtf_image}" style="width:100px; height:80px; object-fit:cover; border-radius:6px;"></div>` : ''}
+          ${e.mtf2_image ? `<div><div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">2nd MTF</div><img src="${e.mtf2_image}" style="width:100px; height:80px; object-fit:cover; border-radius:6px;"></div>` : ''}
           ${e.ltf_image ? `<div><div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">LTF</div><img src="${e.ltf_image}" style="width:100px; height:80px; object-fit:cover; border-radius:6px;"></div>` : ''}
         </div>
       </div>` : ''}

@@ -155,6 +155,7 @@ document.querySelectorAll('.sound-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const wasPlaying = btn.classList.contains('playing');
     stopCurrentSound();
+    if (typeof stopMusic === 'function') stopMusic();
     if (!wasPlaying) {
       playSound(btn.dataset.sound);
       btn.classList.add('playing');
@@ -163,67 +164,121 @@ document.querySelectorAll('.sound-btn').forEach(btn => {
   });
 });
 
-// ---------- Mood-based song suggestions ----------
-const songsByMood = {
+// ---------- Mood-based music (original, generated live with Web Audio API — plays inside the app, no external links) ----------
+let musicCtx = null;
+let musicIntervalId = null;
+let musicCurrentBtn = null;
+
+// Musical scales (frequencies in Hz) and tempo/character per track, grouped by mood.
+// Everything here is generated on the fly — no copyrighted recordings involved.
+const tracksByMood = {
   sad: [
-    ['Someone Like You', 'Adele'],
-    ['Fix You', 'Coldplay'],
-    ['Skinny Love', 'Bon Iver'],
-    ['The Night We Met', 'Lord Huron'],
-    ['Liability', 'Lorde']
+    { name: 'Quiet Rain (A minor)', scale: [220.0, 246.9, 261.6, 293.7, 329.6], tempo: 900, wave: 'sine' },
+    { name: 'Slow Ache', scale: [196.0, 220.0, 246.9, 261.6], tempo: 1100, wave: 'triangle' },
+    { name: 'Heavy Heart', scale: [174.6, 196.0, 207.7, 233.1], tempo: 950, wave: 'sine' },
+    { name: 'Grey Sky', scale: [207.7, 233.1, 246.9, 277.2], tempo: 1000, wave: 'sine' },
+    { name: 'Letting Go', scale: [185.0, 207.7, 220.0, 246.9, 277.2], tempo: 850, wave: 'triangle' }
   ],
   relieved: [
-    ['Weightless', 'Marconi Union'],
-    ['Breathe Me', 'Sia'],
-    ['Holocene', 'Bon Iver'],
-    ['Sunset Lover', 'Petit Biscuit'],
-    ['Better Days', 'NEEDTOBREATHE']
+    { name: 'Exhale', scale: [261.6, 293.7, 329.6, 392.0], tempo: 700, wave: 'sine' },
+    { name: 'Soft Landing', scale: [246.9, 277.2, 311.1, 369.9], tempo: 750, wave: 'sine' },
+    { name: 'Steady Now', scale: [220.0, 261.6, 293.7, 329.6], tempo: 800, wave: 'triangle' },
+    { name: 'Untangled', scale: [233.1, 277.2, 311.1, 349.2], tempo: 720, wave: 'sine' },
+    { name: 'Clear Mind', scale: [196.0, 246.9, 293.7, 329.6], tempo: 780, wave: 'sine' }
   ],
   calm: [
-    ['Clair de Lune', 'Claude Debussy'],
-    ['River Flows in You', 'Yiruma'],
-    ['Weightless Pt. 1', 'Marconi Union'],
-    ['Saturn', 'Sleeping At Last'],
-    ['Intro', 'The xx']
+    { name: 'Still Water', scale: [261.6, 311.1, 349.2, 392.0], tempo: 1100, wave: 'sine' },
+    { name: 'Slow Drift', scale: [220.0, 261.6, 293.7, 349.2], tempo: 1200, wave: 'sine' },
+    { name: 'Open Sky', scale: [196.0, 233.1, 277.2, 329.6], tempo: 1150, wave: 'triangle' },
+    { name: 'Gentle Pulse', scale: [246.9, 293.7, 329.6, 392.0], tempo: 1000, wave: 'sine' },
+    { name: 'Resting Mind', scale: [174.6, 220.0, 261.6, 311.1], tempo: 1250, wave: 'sine' }
   ],
   anxious: [
-    ['Breathe', 'Telepopmusik'],
-    ['Holocene', 'Bon Iver'],
-    ['Mad World', 'Gary Jules'],
-    ['The Scientist', 'Coldplay'],
-    ['Bloom', 'The Paper Kites']
+    { name: 'Settle', scale: [220.0, 246.9, 261.6, 293.7], tempo: 900, wave: 'sine' },
+    { name: 'Ground Yourself', scale: [196.0, 220.0, 246.9, 277.2], tempo: 950, wave: 'sine' },
+    { name: 'Slow Breath', scale: [233.1, 261.6, 293.7, 311.1], tempo: 1000, wave: 'triangle' },
+    { name: 'Steady Hands', scale: [207.7, 233.1, 261.6, 293.7], tempo: 880, wave: 'sine' },
+    { name: 'Coming Down', scale: [185.0, 220.0, 246.9, 277.2], tempo: 1050, wave: 'sine' }
   ],
   happy: [
-    ['Good as Hell', 'Lizzo'],
-    ['Walking on Sunshine', 'Katrina & The Waves'],
-    ['Happy', 'Pharrell Williams'],
-    ['Can\'t Stop the Feeling!', 'Justin Timberlake'],
-    ['Uptown Funk', 'Mark Ronson ft. Bruno Mars']
+    { name: 'Bright Morning (C major)', scale: [261.6, 329.6, 392.0, 440.0, 523.3], tempo: 450, wave: 'triangle' },
+    { name: 'Light Steps', scale: [293.7, 349.2, 440.0, 523.3], tempo: 480, wave: 'square' },
+    { name: 'Sunny Walk', scale: [329.6, 392.0, 440.0, 523.3, 587.3], tempo: 420, wave: 'triangle' },
+    { name: 'Good News', scale: [349.2, 440.0, 523.3, 587.3], tempo: 460, wave: 'triangle' },
+    { name: 'Celebration', scale: [392.0, 440.0, 523.3, 659.3], tempo: 400, wave: 'square' }
   ],
   motivated: [
-    ['Eye of the Tiger', 'Survivor'],
-    ['Stronger', 'Kanye West'],
-    ['Believer', 'Imagine Dragons'],
-    ['Lose Yourself', 'Eminem'],
-    ['Titanium', 'David Guetta ft. Sia']
+    { name: 'Rise Up', scale: [261.6, 311.1, 392.0, 440.0], tempo: 350, wave: 'square' },
+    { name: 'Forward', scale: [293.7, 349.2, 440.0, 493.9], tempo: 320, wave: 'square' },
+    { name: 'Drive', scale: [220.0, 277.2, 329.6, 392.0], tempo: 340, wave: 'sawtooth' },
+    { name: 'Push Through', scale: [246.9, 311.1, 369.9, 440.0], tempo: 300, wave: 'square' },
+    { name: 'Next Trade', scale: [277.2, 349.2, 415.3, 493.9], tempo: 330, wave: 'sawtooth' }
   ]
 };
+
+function stopMusic() {
+  if (musicIntervalId) {
+    clearInterval(musicIntervalId);
+    musicIntervalId = null;
+  }
+  if (musicCurrentBtn) {
+    musicCurrentBtn.classList.remove('playing');
+    musicCurrentBtn.textContent = 'Play';
+    musicCurrentBtn = null;
+  }
+}
+
+function playMusic(track, btn) {
+  stopMusic();
+  if (typeof stopCurrentSound === 'function') stopCurrentSound();
+  if (!musicCtx) musicCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = musicCtx;
+  let noteIndex = 0;
+
+  function playNote() {
+    const freq = track.scale[noteIndex % track.scale.length];
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = track.wave;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + track.tempo / 1000 * 0.9);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + track.tempo / 1000);
+    noteIndex++;
+  }
+
+  playNote();
+  musicIntervalId = setInterval(playNote, track.tempo);
+  btn.classList.add('playing');
+  btn.textContent = 'Stop';
+  musicCurrentBtn = btn;
+}
 
 function renderSongs(mood) {
   const list = document.getElementById('songList');
   list.innerHTML = '';
-  songsByMood[mood].forEach(([title, artist]) => {
-    const query = encodeURIComponent(`${title} ${artist}`);
+  tracksByMood[mood].forEach(track => {
     const item = document.createElement('div');
     item.className = 'song-item';
+    const btnId = 'track-' + Math.random().toString(36).slice(2);
     item.innerHTML = `
       <div>
-        <div class="song-name">${title}</div>
-        <div class="song-artist">${artist}</div>
+        <div class="song-name">${track.name}</div>
       </div>
-      <a href="https://www.youtube.com/results?search_query=${query}" target="_blank" rel="noopener">Listen</a>
+      <button class="timer-btn" id="${btnId}" style="padding:6px 14px; font-size:0.8rem;">Play</button>
     `;
     list.appendChild(item);
+    document.getElementById(btnId).addEventListener('click', (e) => {
+      const isPlaying = e.target.classList.contains('playing');
+      if (isPlaying) {
+        stopMusic();
+      } else {
+        playMusic(track, e.target);
+      }
+    });
   });
 }
 
@@ -231,6 +286,7 @@ document.querySelectorAll('.emotion-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.emotion-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
+    stopMusic();
     renderSongs(tab.dataset.emotion);
   });
 });
