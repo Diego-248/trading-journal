@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar — My Trading Plan and Journal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14110b">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .cal-header h2 { margin: 0; }
+  .cal-nav-btn { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal-dow { text-align: center; color: var(--muted); font-size: 0.75rem; font-weight: 600; padding-bottom: 4px; }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    cursor: default;
+  }
+  .cal-day.empty { background: transparent; border: none; }
+  .cal-day.followed { background: rgba(61,220,151,0.25); border-color: #3ddc97; color: #3ddc97; font-weight: 700; }
+  .cal-day.broke { background: rgba(224,97,63,0.25); border-color: #e0613f; color: #e0613f; font-weight: 700; }
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 0.82rem; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+</style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">My Trading<span>Plan and Journal</span></div>
+    <div class="nav-links">
+      <a href="index.html">Plan</a>
+      <a href="edge.html">Edge</a>
+      <a href="journal.html">Trade Results</a>
+      <a href="sanctuary.html">Sanctuary</a>
+      <a href="mentor.html">Mentor AI</a>
+      <a href="history.html">Journals</a>
+      <a href="calendar.html" class="active">Calendar</a>
+      <a href="profile.html">Profile</a>
+      <a href="settings.html">Settings</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <div class="cal-header">
+        <button class="cal-nav-btn" id="prevMonthBtn">←</button>
+        <h2 id="calMonthLabel">—</h2>
+        <button class="cal-nav-btn" id="nextMonthBtn">→</button>
+      </div>
+
+      <div class="cal-grid" id="calGrid"></div>
+
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#3ddc97;"></span>Followed plan</span>
+        <span><span class="legend-dot" style="background:#e0613f;"></span>Didn't follow plan</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/calendar.js"></script>
+</body>
+</html>
