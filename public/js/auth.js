@@ -32,7 +32,61 @@ async function logout() {
 document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) logoutBtn.addEventListener('click', logout);
+  setupMenuButton();
 });
+
+// ---------- Three-dot menu button (top-left) for switching between screens ----------
+function setupMenuButton() {
+  const navbar = document.querySelector('.navbar');
+  const navLinks = document.querySelector('.nav-links');
+  if (!navbar || !navLinks || document.getElementById('menuBtn')) return;
+
+  const menuBtn = document.createElement('button');
+  menuBtn.id = 'menuBtn';
+  menuBtn.setAttribute('aria-label', 'Menu');
+  menuBtn.textContent = '⋮';
+  menuBtn.style.cssText = `
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    font-size: 1.3rem; line-height: 1; width: 38px; height: 38px; border-radius: 8px;
+    cursor: pointer; margin-right: 12px; order: -1;
+  `;
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'menuDropdown';
+  dropdown.style.cssText = `
+    position: absolute; top: 62px; left: 12px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 10px; padding: 8px;
+    display: none; flex-direction: column; min-width: 180px; z-index: 200;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  `;
+
+  // Build the menu from the same links already in the top nav
+  navLinks.querySelectorAll('a').forEach(link => {
+    const item = document.createElement('a');
+    item.href = link.getAttribute('href');
+    item.textContent = link.textContent;
+    item.style.cssText = `
+      padding: 10px 12px; border-radius: 6px; color: ${link.classList.contains('active') ? 'var(--accent)' : 'var(--text)'};
+      font-weight: ${link.classList.contains('active') ? '700' : '500'}; text-decoration: none; font-size: 0.92rem;
+    `;
+    dropdown.appendChild(item);
+  });
+
+  navbar.style.position = 'relative';
+  navbar.insertBefore(menuBtn, navbar.firstChild);
+  navbar.appendChild(dropdown);
+
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target) && e.target !== menuBtn) {
+      dropdown.style.display = 'none';
+    }
+  });
+}
 
 // ---------- Update-available banner ----------
 // Shows a small banner with an "Update" button when a new version of the
