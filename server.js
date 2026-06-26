@@ -600,7 +600,7 @@ app.post('/api/journal', requireAuth, requireVerified, async (req, res) => {
   const {
     trade_date, symbol, entry_price, stop_loss, take_profit,
     result, r_value, followed_plan, emotion_entry, emotion_after,
-    lesson, notes, htf_image, mtf_image, mtf2_image, ltf_image
+    lesson, notes, htf_image, mtf_image, ltf_image
   } = req.body;
 
   try {
@@ -608,14 +608,14 @@ app.post('/api/journal', requireAuth, requireVerified, async (req, res) => {
       INSERT INTO journal_entries
         (user_id, trade_date, symbol, entry_price, stop_loss, take_profit,
          result, r_value, followed_plan, emotion_entry, emotion_after, lesson, notes,
-         htf_image, mtf_image, mtf2_image, ltf_image)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+         htf_image, mtf_image, ltf_image)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
       RETURNING id
     `, [
       req.session.userId, trade_date || '', symbol || '', entry_price || '',
       stop_loss || '', take_profit || '', result || '', r_value || '',
       followed_plan || '', emotion_entry || '', emotion_after || '',
-      lesson || '', notes || '', htf_image || '', mtf_image || '', mtf2_image || '', ltf_image || ''
+      lesson || '', notes || '', htf_image || '', mtf_image || '', ltf_image || ''
     ]);
     res.json({ success: true, id: insertResult.rows[0].id });
   } catch (err) {
