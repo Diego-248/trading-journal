@@ -1,6 +1,6 @@
 {
   "name": "my-trading-plan-and-journal",
-  "version": "4.2.1",
+  "version": "4.2.2",
   "description": "My Trading Plan and Journal — web app with login and database-backed journal storage",
   "main": "server.js",
   "engines": {
